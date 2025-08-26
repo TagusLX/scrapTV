@@ -1,0 +1,261 @@
+import requests
+import sys
+import time
+import json
+from datetime import datetime
+
+class IdealistaScraperAPITester:
+    def __init__(self, base_url="https://property-data-fetch.preview.emergentagent.com"):
+        self.base_url = base_url
+        self.api_url = f"{base_url}/api"
+        self.tests_run = 0
+        self.tests_passed = 0
+        self.session_id = None
+
+    def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
+        """Run a single API test"""
+        url = f"{self.api_url}/{endpoint}"
+        headers = {'Content-Type': 'application/json'}
+
+        self.tests_run += 1
+        print(f"\n🔍 Testing {name}...")
+        print(f"   URL: {url}")
+        
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, timeout=timeout)
+            elif method == 'POST':
+                response = requests.post(url, json=data, headers=headers, timeout=timeout)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=timeout)
+
+            print(f"   Status Code: {response.status_code}")
+            
+            success = response.status_code == expected_status
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                try:
+                    response_data = response.json()
+                    print(f"   Response: {json.dumps(response_data, indent=2)[:200]}...")
+                    return True, response_data
+                except:
+                    return True, {}
+            else:
+                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"   Error: {error_data}")
+                except:
+                    print(f"   Error: {response.text}")
+                return False, {}
+
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
+
+    def test_start_scraping(self):
+        """Test starting a scraping session"""
+        success, response = self.run_test(
+            "Start Scraping Session",
+            "POST",
+            "scrape/start",
+            200
+        )
+        if success and 'session_id' in response:
+            self.session_id = response['session_id']
+            print(f"   Session ID: {self.session_id}")
+            return True
+        return False
+
+    def test_get_scraping_sessions(self):
+        """Test getting all scraping sessions"""
+        success, response = self.run_test(
+            "Get All Scraping Sessions",
+            "GET",
+            "scraping-sessions",
+            200
+        )
+        if success:
+            print(f"   Found {len(response)} sessions")
+            return True
+        return False
+
+    def test_get_specific_session(self):
+        """Test getting a specific scraping session"""
+        if not self.session_id:
+            print("❌ No session ID available for testing")
+            return False
+            
+        success, response = self.run_test(
+            "Get Specific Scraping Session",
+            "GET",
+            f"scraping-sessions/{self.session_id}",
+            200
+        )
+        if success:
+            print(f"   Session Status: {response.get('status', 'unknown')}")
+            return True
+        return False
+
+    def test_get_properties(self):
+        """Test getting properties with various filters"""
+        # Test without filters
+        success1, response1 = self.run_test(
+            "Get Properties (no filters)",
+            "GET",
+            "properties",
+            200
+        )
+        
+        # Test with limit
+        success2, response2 = self.run_test(
+            "Get Properties (with limit)",
+            "GET",
+            "properties?limit=10",
+            200
+        )
+        
+        # Test with region filter
+        success3, response3 = self.run_test(
+            "Get Properties (with region filter)",
+            "GET",
+            "properties?region=lisboa&limit=5",
+            200
+        )
+        
+        if success1:
+            print(f"   Total properties found: {len(response1)}")
+        if success2:
+            print(f"   Limited properties found: {len(response2)}")
+        if success3:
+            print(f"   Lisboa properties found: {len(response3)}")
+            
+        return success1 and success2 and success3
+
+    def test_get_region_stats(self):
+        """Test getting regional statistics"""
+        success, response = self.run_test(
+            "Get Regional Statistics",
+            "GET",
+            "stats/regions",
+            200
+        )
+        if success:
+            print(f"   Found stats for {len(response)} regions/locations")
+            if response:
+                sample_stat = response[0]
+                print(f"   Sample: {sample_stat.get('region', 'N/A')} - {sample_stat.get('location', 'N/A')}")
+            return True
+        return False
+
+    def test_export_php(self):
+        """Test PHP export functionality"""
+        success, response = self.run_test(
+            "Export PHP Data",
+            "GET",
+            "export/php",
+            200
+        )
+        if success and 'php_array' in response:
+            php_data = response['php_array']
+            print(f"   PHP array contains {len(php_data)} regions")
+            if php_data:
+                sample_region = list(php_data.keys())[0]
+                print(f"   Sample region: {sample_region}")
+            return True
+        return False
+
+    def test_clear_properties(self):
+        """Test clearing all properties"""
+        success, response = self.run_test(
+            "Clear All Properties",
+            "DELETE",
+            "properties",
+            200
+        )
+        if success:
+            deleted_count = response.get('message', '').split()
+            print(f"   Result: {response.get('message', 'Unknown result')}")
+            return True
+        return False
+
+    def wait_for_session_completion(self, max_wait_time=60):
+        """Wait for scraping session to complete or timeout"""
+        if not self.session_id:
+            return False
+            
+        print(f"\n⏳ Waiting for session {self.session_id} to complete (max {max_wait_time}s)...")
+        start_time = time.time()
+        
+        while time.time() - start_time < max_wait_time:
+            try:
+                url = f"{self.api_url}/scraping-sessions/{self.session_id}"
+                response = requests.get(url, timeout=10)
+                if response.status_code == 200:
+                    session_data = response.json()
+                    status = session_data.get('status', 'unknown')
+                    print(f"   Status: {status}")
+                    
+                    if status in ['completed', 'failed']:
+                        if status == 'completed':
+                            print(f"✅ Session completed with {session_data.get('total_properties', 0)} properties")
+                            return True
+                        else:
+                            print(f"❌ Session failed: {session_data.get('error_message', 'Unknown error')}")
+                            return False
+                            
+                time.sleep(5)  # Wait 5 seconds before checking again
+            except Exception as e:
+                print(f"   Error checking session: {e}")
+                time.sleep(5)
+        
+        print(f"⏰ Session did not complete within {max_wait_time} seconds")
+        return False
+
+def main():
+    print("🚀 Starting Idealista Scraper API Tests")
+    print("=" * 50)
+    
+    tester = IdealistaScraperAPITester()
+    
+    # Test basic endpoints first
+    print("\n📋 Testing Basic API Endpoints...")
+    tester.test_get_scraping_sessions()
+    tester.test_get_properties()
+    tester.test_get_region_stats()
+    tester.test_export_php()
+    
+    # Test scraping functionality
+    print("\n🕷️ Testing Scraping Functionality...")
+    if tester.test_start_scraping():
+        # Wait a bit for the session to start
+        time.sleep(3)
+        tester.test_get_specific_session()
+        
+        # Wait for session to complete (with shorter timeout for testing)
+        tester.wait_for_session_completion(max_wait_time=30)
+        
+        # Test data retrieval after scraping
+        print("\n📊 Testing Data After Scraping...")
+        tester.test_get_properties()
+        tester.test_get_region_stats()
+        tester.test_export_php()
+    
+    # Test data management
+    print("\n🗑️ Testing Data Management...")
+    tester.test_clear_properties()
+    
+    # Final results
+    print("\n" + "=" * 50)
+    print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
+    
+    if tester.tests_passed == tester.tests_run:
+        print("🎉 All tests passed!")
+        return 0
+    else:
+        print("❌ Some tests failed!")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
