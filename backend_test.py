@@ -180,6 +180,96 @@ class IdealistaScraperAPITester:
             return True
         return False
 
+    def test_captcha_endpoints(self):
+        """Test CAPTCHA-related endpoints"""
+        print("\n🔐 Testing CAPTCHA Endpoints...")
+        
+        # Test getting CAPTCHA image for non-existent session (should fail)
+        fake_session_id = "fake-session-123"
+        success1, response1 = self.run_test(
+            "Get CAPTCHA Image (Non-existent Session)",
+            "GET",
+            f"captcha/{fake_session_id}",
+            404
+        )
+        
+        # Test solving CAPTCHA for non-existent session (should fail)
+        success2, response2 = self.run_test(
+            "Solve CAPTCHA (Non-existent Session)",
+            "POST",
+            f"captcha/{fake_session_id}/solve",
+            404,
+            data={"solution": "test123"}
+        )
+        
+        # If we have a real session, test with it
+        if self.session_id:
+            # Test getting CAPTCHA image for real session (might not have CAPTCHA)
+            success3, response3 = self.run_test(
+                "Get CAPTCHA Image (Real Session)",
+                "GET",
+                f"captcha/{self.session_id}",
+                404,  # Expected 404 if no CAPTCHA image exists
+                timeout=10
+            )
+            
+            # Test solving CAPTCHA for session not waiting for CAPTCHA
+            success4, response4 = self.run_test(
+                "Solve CAPTCHA (Session Not Waiting)",
+                "POST",
+                f"captcha/{self.session_id}/solve",
+                400,  # Expected 400 if session is not waiting for CAPTCHA
+                data={"solution": "test123"}
+            )
+            
+            return success1 and success2 and success3 and success4
+        
+        return success1 and success2
+
+    def test_session_status_monitoring(self):
+        """Test session status monitoring for CAPTCHA detection"""
+        if not self.session_id:
+            print("❌ No session ID available for status monitoring")
+            return False
+            
+        print(f"\n👁️ Monitoring session {self.session_id} for status changes...")
+        
+        # Check session status multiple times
+        for i in range(3):
+            success, response = self.run_test(
+                f"Session Status Check #{i+1}",
+                "GET",
+                f"scraping-sessions/{self.session_id}",
+                200
+            )
+            
+            if success:
+                status = response.get('status', 'unknown')
+                print(f"   Current Status: {status}")
+                
+                # Check for CAPTCHA-related fields
+                if 'captcha_image_path' in response:
+                    print(f"   CAPTCHA Image Path: {response['captcha_image_path']}")
+                if 'current_url' in response:
+                    print(f"   Current URL: {response['current_url']}")
+                    
+                # If waiting for CAPTCHA, try to get the image
+                if status == 'waiting_captcha':
+                    print("   🔐 Session is waiting for CAPTCHA!")
+                    captcha_success, captcha_response = self.run_test(
+                        "Get CAPTCHA Image (Waiting Session)",
+                        "GET",
+                        f"captcha/{self.session_id}",
+                        200
+                    )
+                    if captcha_success:
+                        print("   ✅ CAPTCHA image retrieved successfully")
+                    break
+                    
+            time.sleep(2)  # Wait 2 seconds between checks
+            
+        return True
+
     def wait_for_session_completion(self, max_wait_time=60):
         """Wait for scraping session to complete or timeout"""
         if not self.session_id:
