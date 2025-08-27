@@ -131,7 +131,7 @@ class IdealistaScraper:
         self.session_id = None
         
     def setup_driver(self):
-        """Setup Selenium Chrome driver with webdriver-manager"""
+        """Setup Selenium Chrome driver for ARM64 architecture"""
         chrome_options = Options()
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--no-sandbox')
@@ -144,20 +144,29 @@ class IdealistaScraper:
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
         
         try:
-            # Use webdriver-manager to handle ChromeDriver installation
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            logger.info("Chrome driver initialized successfully with webdriver-manager")
-        except Exception as e:
-            logger.error(f"Failed to initialize Chrome driver with webdriver-manager: {e}")
-            # Fallback: try with system chromium
-            try:
-                chrome_options.binary_location = '/usr/bin/chromium'
+            # Try with system chromium first (better for ARM64)
+            chrome_options.binary_location = '/usr/bin/chromium'
+            # Use system chromedriver if available
+            service = Service('/usr/bin/chromedriver') if os.path.exists('/usr/bin/chromedriver') else None
+            if service:
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                logger.info("Chrome driver initialized with system chromedriver")
+            else:
+                # Fallback to no service (let selenium find the driver)
                 self.driver = webdriver.Chrome(options=chrome_options)
                 logger.info("Chrome driver initialized with system chromium")
+        except Exception as e:
+            logger.error(f"Failed to initialize with system chromium: {e}")
+            # Last resort: try webdriver-manager
+            try:
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                logger.info("Chrome driver initialized with webdriver-manager")
             except Exception as e2:
-                logger.error(f"Failed to initialize with system chromium: {e2}")
-                raise Exception(f"Could not initialize Chrome driver. webdriver-manager error: {e}, system chromium error: {e2}")
+                logger.error(f"Failed to initialize Chrome driver: webdriver-manager error: {e2}, system error: {e}")
+                # For now, skip Selenium and use basic scraping
+                logger.warning("Selenium not available, falling back to requests-based scraping")
+                self.driver = None
     
     def close_driver(self):
         """Close the Selenium driver"""
