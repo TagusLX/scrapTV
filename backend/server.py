@@ -1,4 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -15,6 +17,15 @@ import asyncio
 import time
 import json
 import re
+import base64
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+import tempfile
 
 
 ROOT_DIR = Path(__file__).parent
@@ -37,6 +48,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Create captcha images directory
+CAPTCHA_DIR = ROOT_DIR / 'captcha_images'
+CAPTCHA_DIR.mkdir(exist_ok=True)
+
+# Mount static files for captcha images
+app.mount("/captcha", StaticFiles(directory=str(CAPTCHA_DIR)), name="captcha")
 
 # Define Models
 class Property(BaseModel):
@@ -63,12 +81,17 @@ class PropertyCreate(BaseModel):
 
 class ScrapingSession(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    status: str  # running, completed, failed
+    status: str  # running, completed, failed, waiting_captcha
     started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     total_properties: int = 0
     regions_scraped: List[str] = []
     error_message: Optional[str] = None
+    captcha_image_path: Optional[str] = None
+    current_url: Optional[str] = None
+
+class CaptchaSolution(BaseModel):
+    solution: str
 
 class RegionStats(BaseModel):
     region: str
@@ -103,16 +126,32 @@ PORTUGUESE_REGIONS = {
 
 class IdealistaScraper:
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'pt-PT,pt;q=0.9,en;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        })
+        self.driver = None
+        self.session_id = None
         
+    def setup_driver(self):
+        """Setup Selenium Chrome driver"""
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--window-size=1920,1080')
+        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+        
+        try:
+            self.driver = webdriver.Chrome(options=chrome_options)
+            logger.info("Chrome driver initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Chrome driver: {e}")
+            raise
+    
+    def close_driver(self):
+        """Close the Selenium driver"""
+        if self.driver:
+            self.driver.quit()
+            self.driver = None
+    
     def extract_price(self, price_text):
         """Extract numeric price from text"""
         if not price_text:
@@ -133,8 +172,115 @@ class IdealistaScraper:
             return float(numbers[0])
         return None
     
-    async def scrape_location(self, region, location, operation_type='sale', property_type=None):
-        """Scrape properties from a specific location"""
+    def check_for_captcha(self):
+        """Check if there's a CAPTCHA on the page"""
+        captcha_selectors = [
+            "//img[contains(@src, 'captcha')]",
+            "//*[contains(@class, 'captcha')]",
+            "//*[contains(@id, 'captcha')]",
+            "//img[contains(@alt, 'captcha')]",
+            "//img[contains(@alt, 'CAPTCHA')]",
+            "//*[text()[contains(., 'CAPTCHA')]]",
+            "//*[text()[contains(., 'Captcha')]]"
+        ]
+        
+        for selector in captcha_selectors:
+            try:
+                elements = self.driver.find_elements(By.XPATH, selector)
+                if elements:
+                    logger.info(f"CAPTCHA detected with selector: {selector}")
+                    return elements[0]
+            except:
+                continue
+        
+        return None
+    
+    def save_captcha_image(self, session_id):
+        """Save CAPTCHA image and return the filename"""
+        captcha_element = self.check_for_captcha()
+        if not captcha_element:
+            return None
+            
+        try:
+            # Take screenshot of the entire page
+            screenshot_path = CAPTCHA_DIR / f"captcha_{session_id}.png"
+            self.driver.save_screenshot(str(screenshot_path))
+            
+            # Try to get CAPTCHA image source if it's an img element
+            if captcha_element.tag_name == 'img':
+                try:
+                    img_src = captcha_element.get_attribute('src')
+                    if img_src and img_src.startswith('data:image'):
+                        # Handle base64 encoded images
+                        header, data = img_src.split(',', 1)
+                        img_data = base64.b64decode(data)
+                        captcha_path = CAPTCHA_DIR / f"captcha_img_{session_id}.png"
+                        with open(captcha_path, 'wb') as f:
+                            f.write(img_data)
+                        return f"captcha_img_{session_id}.png"
+                except Exception as e:
+                    logger.error(f"Error processing CAPTCHA image: {e}")
+            
+            return f"captcha_{session_id}.png"
+            
+        except Exception as e:
+            logger.error(f"Error saving CAPTCHA image: {e}")
+            return None
+    
+    def solve_captcha(self, session_id, solution):
+        """Submit CAPTCHA solution"""
+        try:
+            # Find CAPTCHA input field
+            input_selectors = [
+                "//input[contains(@name, 'captcha')]",
+                "//input[contains(@id, 'captcha')]",
+                "//input[contains(@class, 'captcha')]",
+                "//input[@type='text' and contains(@placeholder, 'captcha')]"
+            ]
+            
+            captcha_input = None
+            for selector in input_selectors:
+                try:
+                    captcha_input = self.driver.find_element(By.XPATH, selector)
+                    break
+                except:
+                    continue
+            
+            if not captcha_input:
+                logger.error("Could not find CAPTCHA input field")
+                return False
+            
+            # Clear and enter solution
+            captcha_input.clear()
+            captcha_input.send_keys(solution)
+            
+            # Find and click submit button
+            submit_selectors = [
+                "//button[contains(text(), 'Enviar')]",
+                "//button[contains(text(), 'Submit')]",
+                "//input[@type='submit']",
+                "//button[@type='submit']",
+                "//button[contains(@class, 'submit')]"
+            ]
+            
+            for selector in submit_selectors:
+                try:
+                    submit_btn = self.driver.find_element(By.XPATH, selector)
+                    submit_btn.click()
+                    time.sleep(2)
+                    return True
+                except:
+                    continue
+            
+            logger.error("Could not find CAPTCHA submit button")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error solving CAPTCHA: {e}")
+            return False
+    
+    async def scrape_location(self, region, location, operation_type='sale', property_type=None, session_id=None):
+        """Scrape properties from a specific location with CAPTCHA handling"""
         properties = []
         
         # Construct URL for idealista.pt
@@ -159,23 +305,74 @@ class IdealistaScraper:
                 url = f"https://www.idealista.pt/{op_type}/{prop_type}/{location}/"
                 logger.info(f"Scraping: {url}")
                 
-                response = self.session.get(url, timeout=10)
-                response.raise_for_status()
+                if not self.driver:
+                    self.setup_driver()
                 
-                soup = BeautifulSoup(response.content, 'html.parser')
+                self.driver.get(url)
+                await asyncio.sleep(3)  # Wait for page to load
                 
-                # Find property listings (this is a simplified selector - may need adjustment)
-                listings = soup.find_all('article', class_=['item', 'item-multimedia'])
+                # Check for CAPTCHA
+                if self.check_for_captcha():
+                    logger.info("CAPTCHA detected, waiting for manual solution...")
+                    
+                    # Save CAPTCHA image
+                    captcha_filename = self.save_captcha_image(session_id)
+                    if captcha_filename and session_id:
+                        # Update session status to waiting_captcha
+                        await db.scraping_sessions.update_one(
+                            {"id": session_id},
+                            {"$set": {
+                                "status": "waiting_captcha",
+                                "captcha_image_path": captcha_filename,
+                                "current_url": url
+                            }}
+                        )
+                        
+                        # Wait for CAPTCHA solution (polling)
+                        captcha_solved = False
+                        wait_time = 0
+                        max_wait = 300  # 5 minutes max wait
+                        
+                        while not captcha_solved and wait_time < max_wait:
+                            await asyncio.sleep(5)
+                            wait_time += 5
+                            
+                            # Check if session status changed (CAPTCHA solved)
+                            session_data = await db.scraping_sessions.find_one({"id": session_id})
+                            if session_data and session_data.get('status') == 'running':
+                                captcha_solved = True
+                                logger.info("CAPTCHA solved, continuing scraping...")
+                                break
+                        
+                        if not captcha_solved:
+                            logger.error("CAPTCHA not solved within time limit")
+                            return properties
+                
+                # Continue with normal scraping
+                try:
+                    # Wait for listings to load
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "article"))
+                    )
+                except TimeoutException:
+                    logger.warning(f"No listings found for {url}")
+                    continue
+                
+                # Find property listings
+                listings = self.driver.find_elements(By.CSS_SELECTOR, 'article[class*="item"]')
                 
                 for listing in listings[:10]:  # Limit to first 10 properties per page
                     try:
                         # Extract price
-                        price_elem = listing.find(['span', 'div'], class_=['item-price', 'price'])
-                        price = self.extract_price(price_elem.get_text() if price_elem else None)
+                        price_elem = listing.find_element(By.CSS_SELECTOR, '[class*="price"]')
+                        price = self.extract_price(price_elem.text if price_elem else None)
                         
                         # Extract area
-                        area_elem = listing.find(['span', 'div'], string=re.compile(r'm²|m2'))
-                        area = self.extract_area(area_elem.get_text() if area_elem else None)
+                        try:
+                            area_elem = listing.find_element(By.XPATH, './/*[contains(text(), "m²") or contains(text(), "m2")]')
+                            area = self.extract_area(area_elem.text if area_elem else None)
+                        except:
+                            area = None
                         
                         # Calculate price per sqm
                         price_per_sqm = None
@@ -183,8 +380,11 @@ class IdealistaScraper:
                             price_per_sqm = price / area
                         
                         # Extract property URL
-                        link_elem = listing.find('a')
-                        property_url = f"https://www.idealista.pt{link_elem['href']}" if link_elem else url
+                        try:
+                            link_elem = listing.find_element(By.CSS_SELECTOR, 'a[href*="/imovel/"]')
+                            property_url = f"https://www.idealista.pt{link_elem.get_attribute('href')}"
+                        except:
+                            property_url = url
                         
                         property_data = {
                             'region': region,
@@ -237,24 +437,39 @@ async def run_scraping_task(session_id: str):
         total_properties = 0
         regions_scraped = []
         
+        # Initialize scraper with session ID
+        scraper.session_id = session_id
+        
         # Scrape all regions
         for region, locations in PORTUGUESE_REGIONS.items():
             regions_scraped.append(region)
             
-            for location in locations:
+            for location in locations[:2]:  # Limit to first 2 locations per region for demo
+                # Check if session is still running (not paused for CAPTCHA)
+                session_data = await db.scraping_sessions.find_one({"id": session_id})
+                if session_data.get('status') == 'waiting_captcha':
+                    logger.info("Session paused for CAPTCHA, waiting...")
+                    continue
+                
                 # Scrape sales
-                sale_properties = await scraper.scrape_location(region, location, 'sale')
+                sale_properties = await scraper.scrape_location(region, location, 'sale', session_id=session_id)
                 for prop_data in sale_properties:
                     property_obj = Property(**prop_data)
                     await db.properties.insert_one(property_obj.dict())
                     total_properties += 1
                 
                 # Scrape rentals
-                rent_properties = await scraper.scrape_location(region, location, 'rent')
+                rent_properties = await scraper.scrape_location(region, location, 'rent', session_id=session_id)
                 for prop_data in rent_properties:
                     property_obj = Property(**prop_data)
                     await db.properties.insert_one(property_obj.dict())
                     total_properties += 1
+                
+                # Small break between locations
+                await asyncio.sleep(1)
+        
+        # Clean up driver
+        scraper.close_driver()
         
         # Update session as completed
         await db.scraping_sessions.update_one(
@@ -271,6 +486,7 @@ async def run_scraping_task(session_id: str):
         
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
+        scraper.close_driver()
         await db.scraping_sessions.update_one(
             {"id": session_id},
             {"$set": {
@@ -279,6 +495,53 @@ async def run_scraping_task(session_id: str):
                 "error_message": str(e)
             }}
         )
+
+@api_router.get("/captcha/{session_id}")
+async def get_captcha_image(session_id: str):
+    """Get CAPTCHA image for a session"""
+    session = await db.scraping_sessions.find_one({"id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    captcha_path = session.get('captcha_image_path')
+    if not captcha_path:
+        raise HTTPException(status_code=404, detail="No CAPTCHA image found")
+    
+    image_path = CAPTCHA_DIR / captcha_path
+    if not image_path.exists():
+        raise HTTPException(status_code=404, detail="CAPTCHA image file not found")
+    
+    return FileResponse(str(image_path))
+
+@api_router.post("/captcha/{session_id}/solve")
+async def solve_captcha_endpoint(session_id: str, solution: CaptchaSolution):
+    """Submit CAPTCHA solution"""
+    session = await db.scraping_sessions.find_one({"id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session.get('status') != 'waiting_captcha':
+        raise HTTPException(status_code=400, detail="Session is not waiting for CAPTCHA")
+    
+    try:
+        # Try to solve CAPTCHA using Selenium
+        if scraper.driver and scraper.solve_captcha(session_id, solution.solution):
+            # Update session to continue scraping
+            await db.scraping_sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "status": "running",
+                    "captcha_image_path": None,
+                    "current_url": None
+                }}
+            )
+            return {"message": "CAPTCHA solved successfully"}
+        else:
+            return {"message": "Failed to solve CAPTCHA", "success": False}
+            
+    except Exception as e:
+        logger.error(f"Error solving CAPTCHA: {e}")
+        raise HTTPException(status_code=500, detail="Error processing CAPTCHA solution")
 
 @api_router.get("/scraping-sessions", response_model=List[ScrapingSession])
 async def get_scraping_sessions():
@@ -401,3 +664,5 @@ app.add_middleware(
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+    if scraper.driver:
+        scraper.close_driver()
