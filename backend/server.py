@@ -131,21 +131,33 @@ class IdealistaScraper:
         self.session_id = None
         
     def setup_driver(self):
-        """Setup Selenium Chrome driver"""
+        """Setup Selenium Chrome driver with webdriver-manager"""
         chrome_options = Options()
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--disable-plugins')
+        chrome_options.add_argument('--disable-images')
         chrome_options.add_argument('--window-size=1920,1080')
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
         
         try:
-            self.driver = webdriver.Chrome(options=chrome_options)
-            logger.info("Chrome driver initialized successfully")
+            # Use webdriver-manager to handle ChromeDriver installation
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            logger.info("Chrome driver initialized successfully with webdriver-manager")
         except Exception as e:
-            logger.error(f"Failed to initialize Chrome driver: {e}")
-            raise
+            logger.error(f"Failed to initialize Chrome driver with webdriver-manager: {e}")
+            # Fallback: try with system chromium
+            try:
+                chrome_options.binary_location = '/usr/bin/chromium'
+                self.driver = webdriver.Chrome(options=chrome_options)
+                logger.info("Chrome driver initialized with system chromium")
+            except Exception as e2:
+                logger.error(f"Failed to initialize with system chromium: {e2}")
+                raise Exception(f"Could not initialize Chrome driver. webdriver-manager error: {e}, system chromium error: {e2}")
     
     def close_driver(self):
         """Close the Selenium driver"""
