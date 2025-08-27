@@ -304,8 +304,8 @@ class IdealistaScraperAPITester:
         return False
 
 def main():
-    print("🚀 Starting Idealista Scraper API Tests")
-    print("=" * 50)
+    print("🚀 Starting Idealista Scraper API Tests with CAPTCHA Support")
+    print("=" * 60)
     
     tester = IdealistaScraperAPITester()
     
@@ -316,12 +316,19 @@ def main():
     tester.test_get_region_stats()
     tester.test_export_php()
     
+    # Test CAPTCHA endpoints
+    print("\n🔐 Testing CAPTCHA Endpoints...")
+    tester.test_captcha_endpoints()
+    
     # Test scraping functionality
     print("\n🕷️ Testing Scraping Functionality...")
     if tester.test_start_scraping():
         # Wait a bit for the session to start
         time.sleep(3)
         tester.test_get_specific_session()
+        
+        # Monitor session for CAPTCHA detection
+        tester.test_session_status_monitoring()
         
         # Wait for session to complete (with shorter timeout for testing)
         tester.wait_for_session_completion(max_wait_time=30)
@@ -337,7 +344,7 @@ def main():
     tester.test_clear_properties()
     
     # Final results
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
     if tester.tests_passed == tester.tests_run:
