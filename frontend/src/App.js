@@ -594,26 +594,16 @@ function tagus_value_get_market_data() {
                       </h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-600">Prix de Vente</p>
+                          <p className="text-sm font-medium text-gray-600">Prix de Vente (€/m²)</p>
                           <p className="text-xl font-bold text-blue-700">
-                            {formatCurrency(stat.avg_sale_price)}
+                            {stat.avg_sale_price_per_sqm ? `${stat.avg_sale_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}
                           </p>
-                          {stat.avg_price_per_sqm_sale && (
-                            <p className="text-sm text-gray-500">
-                              {formatCurrency(stat.avg_price_per_sqm_sale)}/m²
-                            </p>
-                          )}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-600">Prix de Location</p>
+                          <p className="text-sm font-medium text-gray-600">Prix de Location (€/m²)</p>
                           <p className="text-xl font-bold text-green-700">
-                            {formatCurrency(stat.avg_rent_price)}
+                            {stat.avg_rent_price_per_sqm ? `${stat.avg_rent_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}
                           </p>
-                          {stat.avg_price_per_sqm_rent && (
-                            <p className="text-sm text-gray-500">
-                              {formatCurrency(stat.avg_price_per_sqm_rent)}/m²
-                            </p>
-                          )}
                         </div>
                       </div>
                       <div className="mt-4 pt-4 border-t">
