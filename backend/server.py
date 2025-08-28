@@ -110,28 +110,6 @@ PORTUGUESE_STRUCTURE = {
     # Format: {distrito: {concelho: [freguesias...]}}
 }
 
-# Portuguese regions and major cities for scraping
-PORTUGUESE_REGIONS = {
-    'lisboa': ['lisboa', 'cascais', 'sintra', 'almada', 'amadora', 'loures'],
-    'porto': ['porto', 'vila-nova-de-gaia', 'matosinhos', 'gondomar', 'maia'],
-    'faro': ['faro', 'olhao', 'albufeira', 'portimao', 'tavira', 'lagoa'],
-    'braga': ['braga', 'guimaraes', 'barcelos', 'famalicao', 'esposende'],
-    'aveiro': ['aveiro', 'ovar', 'ilhavo', 'agueda', 'estarreja'],
-    'coimbra': ['coimbra', 'figueira-da-foz', 'cantanhede', 'montemor-o-velho'],
-    'leiria': ['leiria', 'marinha-grande', 'batalha', 'pombal', 'alcobaca'],
-    'setubal': ['setubal', 'barreiro', 'almada', 'seixal', 'moita'],
-    'santarem': ['santarem', 'torres-novas', 'entroncamento', 'tomar'],
-    'viseu': ['viseu', 'lamego', 'sao-pedro-do-sul', 'tondela'],
-    'castelo-branco': ['castelo-branco', 'covilha', 'fundao', 'belmonte'],
-    'guarda': ['guarda', 'seia', 'gouveia', 'pinhel'],
-    'braganca': ['braganca', 'mirandela', 'macedo-de-cavaleiros'],
-    'vila-real': ['vila-real', 'chaves', 'peso-da-regua', 'montalegre'],
-    'viana-do-castelo': ['viana-do-castelo', 'ponte-de-lima', 'valenca'],
-    'beja': ['beja', 'serpa', 'moura', 'odemira'],
-    'evora': ['evora', 'estremoz', 'montemor-o-novo', 'vendas-novas'],
-    'portalegre': ['portalegre', 'elvas', 'campo-maior', 'nisa']
-}
-
 class IdealistaScraper:
     def __init__(self):
         self.driver = None
