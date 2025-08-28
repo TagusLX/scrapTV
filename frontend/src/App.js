@@ -25,7 +25,7 @@ const Dashboard = () => {
   const [captchaImage, setCaptchaImage] = useState(null);
   const [captchaSolution, setCaptchaSolution] = useState("");
   const [showCaptchaDialog, setShowCaptchaDialog] = useState(false);
-  const [solvingCaptcha, setSolvingCaptcha] = useState(false);
+  const [coverageStats, setCoverageStats] = useState(null);
 
   const fetchScrapingSessions = async () => {
     try {
