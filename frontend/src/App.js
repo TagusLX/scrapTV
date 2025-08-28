@@ -467,7 +467,7 @@ function tagus_value_get_market_data() {
                         <div className="space-y-1 text-sm">
                           <p>Vente: {stat.avg_sale_price_per_sqm ? `${stat.avg_sale_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</p>
                           <p>Location: {stat.avg_rent_price_per_sqm ? `${stat.avg_rent_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</p>
-                          <p>Propriétés: {stat.total_properties}</p>
+                          <p>Zones Prix: {stat.total_properties}</p>
                         </div>
                       </div>
                     ))}
