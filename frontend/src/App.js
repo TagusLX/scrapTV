@@ -492,111 +492,63 @@ function tagus_value_get_market_data() {
             )}
           </TabsContent>
 
-          <TabsContent value="coverage" className="space-y-6">
+          <TabsContent value="sessions">
             <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Couverture Administrative Complète</CardTitle>
-                <CardDescription>
-                  Suivi de la complétude du scraping par distritos, concelhos et freguesias
-                </CardDescription>
+                <CardTitle>Historique des Sessions de Scraping</CardTitle>
               </CardHeader>
               <CardContent>
-                {coverageStats ? (
-                  <div className="space-y-6">
-                    {/* Overall Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-                        <h4 className="font-semibold text-blue-800">Distritos</h4>
-                        <p className="text-2xl font-bold text-blue-900">
-                          {coverageStats.covered_districts}/{coverageStats.total_districts}
-                        </p>
-                        <p className="text-sm text-blue-700">
-                          {((coverageStats.covered_districts / coverageStats.total_districts) * 100).toFixed(1)}%
-                        </p>
+                <div className="space-y-4">
+                  {scrapingSessions.map((session) => (
+                    <div key={session.id} className="p-4 border rounded-lg bg-white/50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Session {session.id.slice(0, 8)}</p>
+                          <p className="text-sm text-gray-600">
+                            Démarrée: {new Date(session.started_at).toLocaleString('fr-FR')}
+                          </p>
+                          {session.completed_at && (
+                            <p className="text-sm text-gray-600">
+                              Terminée: {new Date(session.completed_at).toLocaleString('fr-FR')}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={getStatusBadgeColor(session.status)}>
+                            {getStatusText(session.status)}
+                          </Badge>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {session.total_properties} propriétés
+                          </p>
+                        </div>
                       </div>
-                      <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
-                        <h4 className="font-semibold text-green-800">Concelhos</h4>
-                        <p className="text-2xl font-bold text-green-900">
-                          {coverageStats.covered_municipalities}/{coverageStats.total_municipalities}
-                        </p>
-                        <p className="text-sm text-green-700">
-                          {((coverageStats.covered_municipalities / coverageStats.total_municipalities) * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
-                        <h4 className="font-semibold text-purple-800">Freguesias</h4>
-                        <p className="text-2xl font-bold text-purple-900">
-                          {coverageStats.covered_parishes}/{coverageStats.total_parishes}
-                        </p>
-                        <p className="text-sm text-purple-700">
-                          {coverageStats.overall_coverage_percentage}%
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg">
-                        <h4 className="font-semibold text-orange-800">Couverture Globale</h4>
-                        <p className="text-3xl font-bold text-orange-900">
-                          {coverageStats.overall_coverage_percentage}%
-                        </p>
-                        <p className="text-sm text-orange-700">Complétude</p>
-                      </div>
+                      {session.error_message && (
+                        <Alert className="mt-3">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>{session.error_message}</AlertDescription>
+                        </Alert>
+                      )}
+                      {session.status === 'waiting_captcha' && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <Camera className="h-4 w-4 text-orange-600" />
+                          <span className="text-sm text-orange-600 font-medium">
+                            En attente de résolution CAPTCHA
+                          </span>
+                          {session.id === captchaSession?.id && (
+                            <Button
+                              size="sm"
+                              onClick={() => setShowCaptchaDialog(true)}
+                              className="ml-2"
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Voir CAPTCHA
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
-
-                    {/* District Details */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Détail par Distrito</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {coverageStats.district_coverage.map((district) => (
-                          <div key={district.distrito} className="border rounded-lg p-4 bg-white/50">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold capitalize">{district.distrito}</h4>
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                district.coverage_percentage === 100 
-                                  ? 'bg-green-100 text-green-800'
-                                  : district.coverage_percentage > 50
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
-                                {district.coverage_percentage}%
-                              </span>
-                            </div>
-                            <div className="space-y-1 text-sm">
-                              <div className="flex justify-between">
-                                <span>Concelhos:</span>
-                                <span>{district.scraped_concelhos}/{district.total_concelhos}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Freguesias:</span>
-                                <span>{district.scraped_freguesias}/{district.total_freguesias}</span>
-                              </div>
-                              {district.missing_concelhos.length > 0 && (
-                                <div className="mt-2 pt-2 border-t">
-                                  <p className="text-xs text-gray-600">
-                                    Concelhos manquants: {district.missing_concelhos.slice(0, 3).join(', ')}
-                                    {district.missing_concelhos.length > 3 && ` +${district.missing_concelhos.length - 3} autres`}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Progress bar */}
-                            <div className="mt-3">
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full transition-all"
-                                  style={{ width: `${district.coverage_percentage}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">Calcul des statistiques de couverture...</p>
-                  </div>
-                )}
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
