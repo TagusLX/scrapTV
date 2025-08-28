@@ -758,7 +758,7 @@ async def get_properties(
 
 @api_router.get("/stats/regions", response_model=List[RegionStats])
 async def get_region_stats():
-    """Get aggregated statistics by region"""
+    """Get aggregated statistics by region with price per m² focus"""
     pipeline = [
         {
             "$group": {
@@ -772,7 +772,7 @@ async def get_region_stats():
     
     results = await db.properties.aggregate(pipeline).to_list(1000)
     
-    # Process results into RegionStats format
+    # Process results into RegionStats format focusing on price per m²
     stats_dict = {}
     for result in results:
         key = f"{result['_id']['region']}-{result['_id']['location']}"
@@ -781,21 +781,21 @@ async def get_region_stats():
                 'region': result['_id']['region'],
                 'location': result['_id']['location'],
                 'total_properties': 0,
-                'avg_sale_price': None,
-                'avg_rent_price': None,
-                'avg_price_per_sqm_sale': None,
-                'avg_price_per_sqm_rent': None
+                'avg_sale_price_per_sqm': None,  # Primary metric for sales
+                'avg_rent_price_per_sqm': None,  # Primary metric for rentals
+                'avg_sale_price': None,  # Keep for detailed stats
+                'avg_rent_price': None   # Keep for detailed stats
             }
         
         op_type = result['_id']['operation_type']
         stats_dict[key]['total_properties'] += result['count']
         
         if op_type == 'sale':
-            stats_dict[key]['avg_sale_price'] = result['avg_price']
-            stats_dict[key]['avg_price_per_sqm_sale'] = result['avg_price_per_sqm']
+            stats_dict[key]['avg_sale_price_per_sqm'] = result['avg_price_per_sqm']  # €/m² for sales
+            stats_dict[key]['avg_sale_price'] = result['avg_price']  # Keep for analytics
         else:
-            stats_dict[key]['avg_rent_price'] = result['avg_price']
-            stats_dict[key]['avg_price_per_sqm_rent'] = result['avg_price_per_sqm']
+            stats_dict[key]['avg_rent_price_per_sqm'] = result['avg_price_per_sqm']  # €/m² for rentals
+            stats_dict[key]['avg_rent_price'] = result['avg_price']  # Keep for analytics
     
     return [RegionStats(**stats) for stats in stats_dict.values()]
 
