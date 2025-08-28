@@ -90,6 +90,15 @@ const Dashboard = () => {
     }
   };
 
+  const fetchRegionStats = async () => {
+    try {
+      const response = await axios.get(`${API}/stats/regions`);
+      setRegionStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
   const fetchCoverageStats = async () => {
     try {
       const response = await axios.get(`${API}/coverage/stats`);
