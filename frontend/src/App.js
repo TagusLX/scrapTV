@@ -90,12 +90,12 @@ const Dashboard = () => {
     }
   };
 
-  const fetchRegionStats = async () => {
+  const fetchCoverageStats = async () => {
     try {
-      const response = await axios.get(`${API}/stats/regions`);
-      setRegionStats(response.data);
+      const response = await axios.get(`${API}/coverage/stats`);
+      setCoverageStats(response.data);
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching coverage stats:', error);
     }
   };
 
