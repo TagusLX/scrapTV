@@ -1227,13 +1227,8 @@ async def clear_all_properties():
     result = await db.properties.delete_many({})
     return {"message": f"Deleted {result.deleted_count} properties"}
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Include the router in the main app
+app.include_router(api_router)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
