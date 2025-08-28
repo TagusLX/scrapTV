@@ -608,7 +608,7 @@ function tagus_value_get_market_data() {
                       </div>
                       <div className="mt-4 pt-4 border-t">
                         <p className="text-sm text-gray-600">
-                          Propriétés Totales: <span className="font-medium">{stat.total_properties}</span>
+                          Zones Prix Totales: <span className="font-medium">{stat.total_properties}</span>
                         </p>
                       </div>
                     </div>
