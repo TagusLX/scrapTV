@@ -686,7 +686,7 @@ async def start_scraping(background_tasks: BackgroundTasks):
     return {"message": "Scraping started", "session_id": session.id}
 
 async def run_scraping_task(session_id: str):
-    """Background task to run the scraping"""
+    """Background task to run the scraping with full administrative structure"""
     try:
         # Update session status
         await db.scraping_sessions.update_one(
@@ -695,43 +695,84 @@ async def run_scraping_task(session_id: str):
         )
         
         total_properties = 0
-        regions_scraped = []
+        districts_scraped = []
         
         # Initialize scraper with session ID
         scraper.session_id = session_id
         
-        # Get administrative structure
-        await scraper.get_administrative_structure()
+        # Get the administrative structure from idealista.pt
+        logger.info("Fetching Portuguese administrative structure...")
+        structure = await scraper.get_administrative_structure()
         
-        # Scrape all regions using the new administrative structure
-        for distrito, concelhos in scraper.administrative_structure.items():
-            regions_scraped.append(distrito)
+        if not structure:
+            logger.error("Could not obtain administrative structure")
+            await db.scraping_sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "status": "failed",
+                    "completed_at": datetime.now(timezone.utc),
+                    "error_message": "Could not obtain Portuguese administrative structure"
+                }}
+            )
+            return
+        
+        logger.info(f"Starting comprehensive scraping of {len(structure)} districts")
+        
+        # Scrape all districts, concelhos, and freguesias
+        for distrito, concelhos in structure.items():
+            districts_scraped.append(distrito)
+            logger.info(f"Scraping distrito: {distrito} ({len(concelhos)} concelhos)")
             
-            # Get first 2 concelhos per distrito for demo
-            concelho_list = list(concelhos.keys())[:2]
-            for concelho in concelho_list:
-                # Check if session is still running (not paused for CAPTCHA)
-                session_data = await db.scraping_sessions.find_one({"id": session_id})
-                if session_data.get('status') == 'waiting_captcha':
-                    logger.info("Session paused for CAPTCHA, waiting...")
-                    continue
+            for concelho, freguesias in concelhos.items():
+                logger.info(f"Scraping concelho: {concelho} ({len(freguesias)} freguesias)")
                 
-                # Scrape sales
-                sale_properties = await scraper.scrape_location(distrito, concelho, 'sale', session_id=session_id)
-                for prop_data in sale_properties:
-                    property_obj = Property(**prop_data)
-                    await db.properties.insert_one(property_obj.dict())
-                    total_properties += 1
+                # Limit freguesias for demonstration (remove this limit for full scraping)
+                limited_freguesias = freguesias[:3]  # Only first 3 freguesias per concelho
                 
-                # Scrape rentals
-                rent_properties = await scraper.scrape_location(distrito, concelho, 'rent', session_id=session_id)
-                for prop_data in rent_properties:
-                    property_obj = Property(**prop_data)
-                    await db.properties.insert_one(property_obj.dict())
-                    total_properties += 1
+                for freguesia in limited_freguesias:
+                    # Check if session is still running (not paused for CAPTCHA)
+                    session_data = await db.scraping_sessions.find_one({"id": session_id})
+                    if session_data and session_data.get('status') == 'waiting_captcha':
+                        logger.info("Session paused for CAPTCHA, waiting...")
+                        # Wait for CAPTCHA resolution
+                        while True:
+                            await asyncio.sleep(5)
+                            session_data = await db.scraping_sessions.find_one({"id": session_id})
+                            if session_data.get('status') != 'waiting_captcha':
+                                break
+                    
+                    try:
+                        logger.info(f"Processing: {distrito}/{concelho}/{freguesia}")
+                        
+                        # Scrape sales data for this administrative unit
+                        sale_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'sale', session_id=session_id)
+                        for prop_data in sale_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+                        
+                        # Scrape rental data for this administrative unit
+                        rent_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'rent', session_id=session_id)
+                        for prop_data in rent_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+                        
+                        # Small delay between freguesias to be respectful
+                        await asyncio.sleep(0.5)
+                        
+                    except Exception as e:
+                        logger.error(f"Error scraping {distrito}/{concelho}/{freguesia}: {e}")
+                        continue
                 
-                # Small break between locations
+                # Delay between concelhos
                 await asyncio.sleep(1)
+            
+            # Delay between districts
+            await asyncio.sleep(2)
+            
+            # Log progress
+            logger.info(f"Completed distrito {distrito}. Total properties so far: {total_properties}")
         
         # Clean up driver
         scraper.close_driver()
@@ -743,14 +784,14 @@ async def run_scraping_task(session_id: str):
                 "status": "completed",
                 "completed_at": datetime.now(timezone.utc),
                 "total_properties": total_properties,
-                "regions_scraped": regions_scraped
+                "regions_scraped": districts_scraped
             }}
         )
         
-        logger.info(f"Scraping completed: {total_properties} properties")
+        logger.info(f"Administrative scraping completed: {total_properties} administrative units processed")
         
     except Exception as e:
-        logger.error(f"Scraping failed: {e}")
+        logger.error(f"Administrative scraping failed: {e}")
         scraper.close_driver()
         await db.scraping_sessions.update_one(
             {"id": session_id},
