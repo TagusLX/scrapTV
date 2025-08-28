@@ -970,11 +970,256 @@ async def export_php_format():
     
     return {"php_array": php_array}
 
-@api_router.delete("/properties")
-async def clear_all_properties():
-    """Clear all scraped properties"""
-    result = await db.properties.delete_many({})
-    return {"message": f"Deleted {result.deleted_count} properties"}
+@api_router.get("/coverage/stats", response_model=CompleteCoverageReport)
+async def get_coverage_stats():
+    """Get comprehensive coverage statistics for all administrative levels"""
+    
+    # Get the administrative structure
+    if not scraper.administrative_structure:
+        await scraper.get_administrative_structure()
+    
+    structure = scraper.administrative_structure
+    if not structure:
+        raise HTTPException(status_code=500, detail="Could not obtain administrative structure")
+    
+    # Get all scraped data
+    scraped_properties = await db.properties.find().to_list(10000)
+    
+    # Create sets of what we've scraped
+    scraped_districts = set()
+    scraped_municipalities = set()
+    scraped_parishes = set()
+    
+    for prop in scraped_properties:
+        distrito = prop['region']
+        location_parts = prop['location'].split('_')
+        if len(location_parts) == 2:
+            concelho, freguesia = location_parts
+            
+            scraped_districts.add(distrito)
+            scraped_municipalities.add(f"{distrito}_{concelho}")
+            scraped_parishes.add(f"{distrito}_{concelho}_{freguesia}")
+    
+    # Calculate totals from structure
+    total_districts = len(structure)
+    total_municipalities = sum(len(concelhos) for concelhos in structure.values())
+    total_parishes = sum(
+        len(freguesias) 
+        for concelhos in structure.values() 
+        for freguesias in concelhos.values()
+    )
+    
+    # Calculate coverage
+    covered_districts = len(scraped_districts)
+    covered_municipalities = len(scraped_municipalities)
+    covered_parishes = len(scraped_parishes)
+    
+    overall_coverage = (covered_parishes / total_parishes * 100) if total_parishes > 0 else 0
+    
+    # Generate district-level coverage stats
+    district_coverage = []
+    
+    for distrito, concelhos in structure.items():
+        total_concelhos = len(concelhos)
+        total_freguesias_district = sum(len(freguesias) for freguesias in concelhos.values())
+        
+        # Count what's scraped for this district
+        scraped_concelhos_count = 0
+        scraped_freguesias_count = 0
+        missing_concelhos = []
+        missing_freguesias = []
+        
+        for concelho, freguesias in concelhos.items():
+            concelho_key = f"{distrito}_{concelho}"
+            if concelho_key in scraped_municipalities:
+                scraped_concelhos_count += 1
+            else:
+                missing_concelhos.append(concelho)
+            
+            for freguesia in freguesias:
+                parish_key = f"{distrito}_{concelho}_{freguesia}"
+                if parish_key in scraped_parishes:
+                    scraped_freguesias_count += 1
+                else:
+                    missing_freguesias.append(f"{concelho}/{freguesia}")
+        
+        coverage_pct = (scraped_freguesias_count / total_freguesias_district * 100) if total_freguesias_district > 0 else 0
+        
+        district_coverage.append(CoverageStats(
+            distrito=distrito,
+            total_concelhos=total_concelhos,
+            scraped_concelhos=scraped_concelhos_count,
+            total_freguesias=total_freguesias_district,
+            scraped_freguesias=scraped_freguesias_count,
+            coverage_percentage=round(coverage_pct, 2),
+            missing_concelhos=missing_concelhos,
+            missing_freguesias=missing_freguesias[:20]  # Limit to first 20 missing
+        ))
+    
+    return CompleteCoverageReport(
+        total_districts=total_districts,
+        covered_districts=covered_districts,
+        total_municipalities=total_municipalities,
+        covered_municipalities=covered_municipalities,
+        total_parishes=total_parishes,
+        covered_parishes=covered_parishes,
+        overall_coverage_percentage=round(overall_coverage, 2),
+        district_coverage=district_coverage
+    )
+
+@api_router.get("/coverage/missing/{distrito}")
+async def get_missing_areas(distrito: str):
+    """Get detailed list of missing concelhos and freguesias for a specific district"""
+    
+    if not scraper.administrative_structure:
+        await scraper.get_administrative_structure()
+    
+    structure = scraper.administrative_structure
+    if distrito not in structure:
+        raise HTTPException(status_code=404, detail=f"District {distrito} not found")
+    
+    # Get scraped data for this district
+    scraped_properties = await db.properties.find({"region": distrito}).to_list(10000)
+    
+    scraped_parishes = set()
+    for prop in scraped_properties:
+        location_parts = prop['location'].split('_')
+        if len(location_parts) == 2:
+            concelho, freguesia = location_parts
+            scraped_parishes.add(f"{concelho}_{freguesia}")
+    
+    missing_areas = {}
+    concelhos = structure[distrito]
+    
+    for concelho, freguesias in concelhos.items():
+        missing_freguesias_in_concelho = []
+        
+        for freguesia in freguesias:
+            key = f"{concelho}_{freguesia}"
+            if key not in scraped_parishes:
+                missing_freguesias_in_concelho.append(freguesia)
+        
+        if missing_freguesias_in_concelho:
+            missing_areas[concelho] = missing_freguesias_in_concelho
+    
+    return {
+        "distrito": distrito,
+        "missing_areas": missing_areas,
+        "total_missing_parishes": sum(len(freguesias) for freguesias in missing_areas.values()),
+        "total_parishes_in_district": sum(len(freguesias) for freguesias in concelhos.values()),
+        "coverage_percentage": round(
+            ((sum(len(freguesias) for freguesias in concelhos.values()) - 
+              sum(len(freguesias) for freguesias in missing_areas.values())) / 
+             sum(len(freguesias) for freguesias in concelhos.values()) * 100), 2
+        ) if sum(len(freguesias) for freguesias in concelhos.values()) > 0 else 0
+    }
+
+@api_router.post("/scrape/missing/{distrito}")
+async def scrape_missing_areas(distrito: str, background_tasks: BackgroundTasks):
+    """Start scraping only the missing areas for a specific district"""
+    
+    if not scraper.administrative_structure:
+        await scraper.get_administrative_structure()
+    
+    structure = scraper.administrative_structure
+    if distrito not in structure:
+        raise HTTPException(status_code=404, detail=f"District {distrito} not found")
+    
+    # Get missing areas
+    missing_data = await get_missing_areas(distrito)
+    missing_areas = missing_data["missing_areas"]
+    
+    if not missing_areas:
+        return {"message": f"No missing areas found for district {distrito}", "session_id": None}
+    
+    # Create scraping session
+    session = ScrapingSession(status="running")
+    session_dict = session.dict()
+    await db.scraping_sessions.insert_one(session_dict)
+    
+    # Start background task for missing areas only
+    background_tasks.add_task(run_missing_scraping_task, session.id, distrito, missing_areas)
+    
+    return {
+        "message": f"Started scraping {sum(len(freguesias) for freguesias in missing_areas.values())} missing parishes in {distrito}", 
+        "session_id": session.id,
+        "missing_areas": missing_areas
+    }
+
+async def run_missing_scraping_task(session_id: str, distrito: str, missing_areas: dict):
+    """Background task to scrape only missing areas"""
+    try:
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {"status": "running"}}
+        )
+        
+        total_properties = 0
+        scraper.session_id = session_id
+        
+        logger.info(f"Starting missing area scraping for district: {distrito}")
+        
+        for concelho, freguesias in missing_areas.items():
+            logger.info(f"Scraping missing freguesias in {concelho}: {freguesias}")
+            
+            for freguesia in freguesias:
+                try:
+                    # Check for CAPTCHA pause
+                    session_data = await db.scraping_sessions.find_one({"id": session_id})
+                    if session_data and session_data.get('status') == 'waiting_captcha':
+                        while True:
+                            await asyncio.sleep(5)
+                            session_data = await db.scraping_sessions.find_one({"id": session_id})
+                            if session_data.get('status') != 'waiting_captcha':
+                                break
+                    
+                    logger.info(f"Processing missing: {distrito}/{concelho}/{freguesia}")
+                    
+                    # Scrape sales
+                    sale_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'sale', session_id=session_id)
+                    for prop_data in sale_properties:
+                        property_obj = Property(**prop_data)
+                        await db.properties.insert_one(property_obj.dict())
+                        total_properties += 1
+                    
+                    # Scrape rentals
+                    rent_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'rent', session_id=session_id)
+                    for prop_data in rent_properties:
+                        property_obj = Property(**prop_data)
+                        await db.properties.insert_one(property_obj.dict())
+                        total_properties += 1
+                    
+                    await asyncio.sleep(0.5)
+                    
+                except Exception as e:
+                    logger.error(f"Error scraping missing {distrito}/{concelho}/{freguesia}: {e}")
+                    continue
+        
+        scraper.close_driver()
+        
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc),
+                "total_properties": total_properties,
+                "regions_scraped": [distrito]
+            }}
+        )
+        
+        logger.info(f"Missing area scraping completed for {distrito}: {total_properties} properties")
+        
+    except Exception as e:
+        logger.error(f"Missing area scraping failed: {e}")
+        scraper.close_driver()
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc),
+                "error_message": str(e)
+            }}
+        )
 
 # Include the router in the main app
 app.include_router(api_router)
