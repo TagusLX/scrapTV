@@ -104,6 +104,12 @@ class RegionStats(BaseModel):
     avg_sale_price: Optional[float] = None
     avg_rent_price: Optional[float] = None
 
+# Portuguese administrative structure (will be populated dynamically)
+PORTUGUESE_STRUCTURE = {
+    # Will be populated from idealista.pt reports page
+    # Format: {distrito: {concelho: [freguesias...]}}
+}
+
 # Portuguese regions and major cities for scraping
 PORTUGUESE_REGIONS = {
     'lisboa': ['lisboa', 'cascais', 'sintra', 'almada', 'amadora', 'loures'],
