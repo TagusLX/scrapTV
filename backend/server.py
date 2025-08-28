@@ -97,11 +97,12 @@ class CaptchaSolution(BaseModel):
 class RegionStats(BaseModel):
     region: str
     location: str
+    avg_sale_price_per_sqm: Optional[float] = None  # €/m² for sales
+    avg_rent_price_per_sqm: Optional[float] = None  # €/m² for rentals
+    total_properties: int = 0
+    # Keep other stats for detailed analytics
     avg_sale_price: Optional[float] = None
     avg_rent_price: Optional[float] = None
-    total_properties: int = 0
-    avg_price_per_sqm_sale: Optional[float] = None
-    avg_price_per_sqm_rent: Optional[float] = None
 
 # Portuguese regions and major cities for scraping
 PORTUGUESE_REGIONS = {
