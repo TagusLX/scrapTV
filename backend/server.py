@@ -736,11 +736,16 @@ async def run_scraping_task(session_id: str):
         # Initialize scraper with session ID
         scraper.session_id = session_id
         
-        # Scrape all regions
-        for region, locations in PORTUGUESE_REGIONS.items():
-            regions_scraped.append(region)
+        # Get administrative structure
+        await scraper.get_administrative_structure()
+        
+        # Scrape all regions using the new administrative structure
+        for distrito, concelhos in scraper.administrative_structure.items():
+            regions_scraped.append(distrito)
             
-            for location in locations[:2]:  # Limit to first 2 locations per region for demo
+            # Get first 2 concelhos per distrito for demo
+            concelho_list = list(concelhos.keys())[:2]
+            for concelho in concelho_list:
                 # Check if session is still running (not paused for CAPTCHA)
                 session_data = await db.scraping_sessions.find_one({"id": session_id})
                 if session_data.get('status') == 'waiting_captcha':
@@ -748,14 +753,14 @@ async def run_scraping_task(session_id: str):
                     continue
                 
                 # Scrape sales
-                sale_properties = await scraper.scrape_location(region, location, 'sale', session_id=session_id)
+                sale_properties = await scraper.scrape_location(distrito, concelho, 'sale', session_id=session_id)
                 for prop_data in sale_properties:
                     property_obj = Property(**prop_data)
                     await db.properties.insert_one(property_obj.dict())
                     total_properties += 1
                 
                 # Scrape rentals
-                rent_properties = await scraper.scrape_location(region, location, 'rent', session_id=session_id)
+                rent_properties = await scraper.scrape_location(distrito, concelho, 'rent', session_id=session_id)
                 for prop_data in rent_properties:
                     property_obj = Property(**prop_data)
                     await db.properties.insert_one(property_obj.dict())
