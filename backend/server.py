@@ -165,7 +165,7 @@ class IdealistaScraper:
             except Exception as e2:
                 logger.error(f"Failed to initialize Chrome driver: webdriver-manager error: {e2}, system error: {e}")
                 # For now, skip Selenium and use basic scraping
-                logger.warning("Selenium not available, falling back to requests-based scraping")
+                logger.warning("Selenium not available, will use requests-based scraping")
                 self.driver = None
     
     def close_driver(self):
