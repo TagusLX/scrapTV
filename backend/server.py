@@ -104,6 +104,26 @@ class RegionStats(BaseModel):
     avg_sale_price: Optional[float] = None
     avg_rent_price: Optional[float] = None
 
+class CoverageStats(BaseModel):
+    distrito: str
+    total_concelhos: int
+    scraped_concelhos: int
+    total_freguesias: int
+    scraped_freguesias: int
+    coverage_percentage: float
+    missing_concelhos: List[str] = []
+    missing_freguesias: List[str] = []
+
+class CompleteCoverageReport(BaseModel):
+    total_districts: int
+    covered_districts: int
+    total_municipalities: int
+    covered_municipalities: int
+    total_parishes: int
+    covered_parishes: int
+    overall_coverage_percentage: float
+    district_coverage: List[CoverageStats]
+
 # Portuguese administrative structure (will be populated dynamically)
 PORTUGUESE_STRUCTURE = {
     # Will be populated from idealista.pt reports page
