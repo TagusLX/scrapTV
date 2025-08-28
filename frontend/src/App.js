@@ -226,9 +226,13 @@ function tagus_value_get_market_data() {
     fetchScrapingSessions();
     fetchProperties();
     fetchRegionStats();
+    fetchCoverageStats();
     
     // Poll for sessions every 5 seconds to check for CAPTCHAs
-    const pollInterval = setInterval(fetchScrapingSessions, 5000);
+    const pollInterval = setInterval(() => {
+      fetchScrapingSessions();
+      fetchCoverageStats(); // Also update coverage
+    }, 5000);
     return () => clearInterval(pollInterval);
   }, []);
 
