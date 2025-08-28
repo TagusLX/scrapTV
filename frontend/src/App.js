@@ -568,7 +568,7 @@ function tagus_value_get_market_data() {
                             <p>Surface: {property.area} m²</p>
                           )}
                           {property.price_per_sqm && (
-                            <p>€/m²: {formatCurrency(property.price_per_sqm)}</p>
+                            <p>€/m²: {property.price_per_sqm.toFixed(0)} €/m²</p>
                           )}
                         </div>
                       </div>
