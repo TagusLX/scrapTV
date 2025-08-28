@@ -1221,8 +1221,11 @@ async def run_missing_scraping_task(session_id: str, distrito: str, missing_area
             }}
         )
 
-# Include the router in the main app
-app.include_router(api_router)
+@api_router.delete("/properties")
+async def clear_all_properties():
+    """Clear all scraped properties"""
+    result = await db.properties.delete_many({})
+    return {"message": f"Deleted {result.deleted_count} properties"}
 
 app.add_middleware(
     CORSMiddleware,
