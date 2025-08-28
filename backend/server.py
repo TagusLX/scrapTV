@@ -209,6 +209,48 @@ class IdealistaScraper:
         
         # Fallback: Use comprehensive Portuguese administrative structure
         fallback_structure = {
+            'aveiro': {
+                'aveiro': ['aveiro', 'cacia', 'eixo-e-eirol', 'esgueira', 'glória-e-vera-cruz', 'oliveirinha', 'requeixo-nossa-senhora-de-fátima-e-nariz', 'santa-joana', 'são-bernardo', 'são-jacinto'],
+                'ovar': ['ovar-são-cristóvão-santa-eulália-e-são-joão', 'esmoriz', 'cortegaça', 'ovar-são-vicente'],
+                'ilhavo': ['ilhavo-cidade', 'gafanha-da-nazaré', 'gafanha-do-carmo'],
+                'agueda': ['águeda-e-borralha', 'barrô-e-aguada-de-baixo', 'castanheira-do-vouga', 'espinhel', 'fermentelos', 'lamas-do-vouga', 'macieira-de-alcoba', 'mortágua', 'óis-da-ribeira-e-travanca', 'préstimo-e-macieira-de-alcoba', 'recardães-e-espinhel', 'travassô-e-óis-da-ribeira', 'trofa-segadães-e-lamas-do-vouga', 'valongo-do-vouga'],
+                'estarreja': ['avanca', 'beduído-e-veiros', 'canelas-e-espinhel', 'estarreja', 'fermelã', 'pardilhó', 'salreu']
+            },
+            'beja': {
+                'beja': ['beja-salvador-e-santa-maria-da-feira', 'albernoa', 'baleizão', 'beringel', 'cabeça-gorda', 'nossa-senhora-das-neves', 'quintos', 'salvada', 'santa-clara-de-louredo', 'santa-vitória', 'são-brissos', 'são-matias', 'trigaches'],
+                'serpa': ['brinches', 'pias', 'serpa', 'vale-de-vargo'],
+                'moura': ['amareleja', 'barrancos', 'moura-santo-agostinho', 'moura-santo-antónio-dos-açougues-e-são-joão-baptista', 'póvoa-de-são-miguel', 'safara', 'santo-aleixo-da-restauração', 'sobral-da-adiça'],
+                'odemira': ['almograve', 'boavista-dos-pinheiros', 'colos', 'longueira-almograve', 'luzianes-gare', 'odemira', 'pereiras-gare', 'relíquias', 'sabóia', 'santa-clara-a-velha', 'são-luís', 'são-martinho-das-amoreiras', 'são-salvador-e-santa-maria', 'vale-de-santiago', 'vila-nova-de-milfontes', 'zambujeira-do-mar']
+            },
+            'braga': {
+                'braga': ['adaúfe', 'arentim-e-cunha', 'braga-maximinos-sé-e-cividade', 'braga-são-josé-de-são-lázaro-e-são-joão-do-souto', 'braga-são-paio-merelim-panóias-e-parada-de-tibães', 'braga-são-vicente', 'cabreiros', 'celeirós-aveleda-e-vimieiro', 'dume', 'escudeiros-e-vilar-de-cunhas', 'espinho', 'esporões', 'ferreiros-e-gondizalves', 'figueiredo', 'fraião-e-lamaçães', 'gualtar', 'lamaçães', 'lamas', 'lomar-e-arcos', 'merelim-pedro', 'merelim-são-paio', 'mire-de-tibães', 'morreira-e-trandeiras', 'nogueira-fraião-e-lamaçães', 'nogueiró-e-tenões', 'padim-da-graça', 'palmeira', 'panóias', 'parada-de-tibães', 'pousada', 'real-dume-e-semelhe', 'ruilhe', 'são-paio-merelim', 'semelhe', 'sequeira', 'sobreposta', 'tebosa', 'tenões', 'trandeiras', 'vilaça-e-figueiredo', 'vimieiro'],
+                'guimaraes': ['abação-gémeos', 'airão-santa-maria', 'airão-são-joão-e-vermil', 'aldão', 'azurém', 'brito', 'caldelas', 'candoso-santiago', 'candoso-são-martinho-e-candoso-são-tiago', 'conde-s-vicente-da-chã', 'corvite', 'costa', 'creixomil', 'fermentões', 'gandra', 'gandarela', 'garfe', 'gonça', 'gondar', 'guardizela', 'guimarães-oliveira-são-paio-e-são-sebastião', 'infantas', 'lei-lousada-e-vilar-de-ferreiros', 'leitões', 'lordelo', 'mesão-frio', 'moreira-de-cónegos', 'nespereira-e-casais', 'oliveira-são-pedro-e-são-paio', 'pevidém', 'polvoreira', 'ponte', 'ronfe', 'são-torcato', 'selho-são-cristóvão', 'selho-são-jorge', 'serzedo-e-perosinho', 'silvares', 'souto-santa-maria-souto-são-salvador-e-souto-são-pedro', 'tabuadelo-e-são-faustino', 'urgezes', 'vermil'],
+                'barcelos': ['abade-de-neiva', 'alheira-e-igreja-nova', 'alvito-são-pedro-e-alvito-são-martinho', 'arcozelo', 'areias-de-vilar-e-encourados', 'ázere', 'barcelinhos', 'barcelos-vila-boa-e-vila-frescainha-são-martinho-e-são-pedro', 'barqueiros', 'cambeses', 'carapeços', 'carvalhal', 'chavão', 'chorente-góios-courel-pedra-furada-e-gueral', 'cossourado-e-lage', 'cristelo', 'durrães-e-tregosa', 'esmeriz-e-cabeçudos', 'faria', 'fragoso', 'galegos-santa-maria', 'galegos-são-martinho', 'gilmonde', 'lijó', 'manhente', 'martim', 'milhazes', 'minhotães', 'moure', 'negreiros-e-chavão', 'oliveira', 'palme', 'panque', 'pereira', 'pousa', 'quintiães', 'roriz', 'são-martinho-de-bougado', 'são-pedro-de-bougado', 'silva', 'tamel-santa-leocádia', 'tamel-são-pedro-fins', 'ucha', 'vale', 'várzea', 'viatodos-grimancelos-minhotães-e-monte-de-fralães', 'vila-boa', 'vila-cova-a-coelheira', 'vila-frescainha-são-martinho', 'vila-frescainha-são-pedro', 'vilar-de-figos'],
+                'famalicao': ['antas-e-abade-de-vermoim', 'arnoso-santa-eulália-arnoso-santa-maria-seide-são-miguel-e-seide-são-paio', 'avidos-e-lagoa', 'bairro-calendário-cruz-e-oliveira-santa-maria', 'bente', 'brufe', 'carreira', 'cavalões', 'delães', 'esmeriz-e-cabeçudos', 'fradelos', 'gavião', 'gondifelos-cavalões-e-outiz', 'joane', 'landim', 'lemenhe-mouquim-e-jesufrei', 'mogege', 'nin-e-vale-de-são-cosme', 'novais', 'oliveira-santa-maria-oliveira-são-mateus-e-silveiros', 'outiz', 'pedome', 'portela', 'requião', 'ribeirão', 'riba-de-ave', 'ruivães-novais', 'santo-tirso-couto-santa-cristina-e-santo-tirso-burgães', 'seide-são-miguel', 'seide-são-paio', 'sequeirô-e-jesufrei', 'subportela-deocriste-e-portela-susã', 'vale-são-cosme-telhado-e-portela', 'vale-são-martinho', 'vermoim', 'vilarinho-das-cambas'],
+                'esposende': ['antas', 'apúlia-e-fão', 'barcelinhos', 'belinho-e-mar', 'curvos', 'esposende-marinhas-e-gandra', 'forjães', 'gemeses', 'palmeira-de-faro-e-curvos', 'rio-tinto']
+            },
+            'braganca': {
+                'braganca': ['alfaião', 'aveleda', 'babe', 'baçal', 'bragança-se-santa-maria-e-meixedo', 'castrelos', 'coelhoso', 'donai', 'espinhosela', 'estevais', 'frança', 'gimonde', 'gondesende', 'gostei', 'grijó-de-parada', 'izeda-calvelhe-e-paradinha-nova', 'macedo-do-mato', 'meixedo', 'milhão', 'mofreita', 'montesinho', 'nogueira', 'outeiro', 'parada', 'paradinha-nova', 'parâmio', 'pinela', 'quintanilha', 'rabal', 'rebordaínhos', 'rebordelos', 'rio-de-onor', 'rio-frio', 'samil', 'santa-comba-de-rossas', 'santa-cruz', 'são-julião-de-palácios-e-deilão', 'são-pedro-de-serracenos', 'sendas', 'serapicos', 'sortes', 'zoio'],
+                'mirandela': ['ala', 'alvites', 'avantos-e-cachão', 'avidagos', 'barcel', 'bouça-cabeça-boa-e-pinheiro-novo', 'cabanelas', 'cachão', 'carvalhais', 'cedães', 'cobro', 'contim', 'couço', 'cunhas', 'fradizela', 'frechas', 'freixeda', 'lamas-de-orelhão', 'mascarenhas', 'mirandela', 'múrias', 'navalho', 'pereira', 'póvoa', 'romeu', 'são-pedro-velho', 'suçães', 'torre-de-dona-chama', 'val-de-asneas', 'vale-de-gouvinhas', 'vale-de-salgueiro', 'vale-de-telhas', 'valverde-da-gestosa', 'vilar-de-nantes'],
+                'macedo-de-cavaleiros': ['ala', 'amendoeira', 'arcas', 'bagueixe', 'bornes', 'burga', 'carrapatas', 'chacim', 'cortiços', 'edrosa', 'espadanedo-edrosa-murçós-e-soutelo-mourisco', 'ferreira', 'grijó-de-parada', 'lamalonga', 'lamas', 'lavradas', 'ligares', 'lombo', 'macedo-de-cavaleiros', 'morais', 'murçós', 'olmos', 'peredo', 'podence', 'quinta-da-lomba', 'salsas', 'sesulfe', 'soutelo-mourisco', 'talhinhas', 'taliscas', 'travanca', 'vale-benfeito', 'vale-da-porca', 'vale-de-prados', 'vilar-do-monte', 'vilarinho-de-agrochão', 'vinhas']
+            },
+            'castelo-branco': {
+                'castelo-branco': ['alcains', 'almaceda', 'benquerenças', 'castelo-branco', 'cebolais-de-cima-e-retaxo', 'escalos-de-baixo-e-mata', 'escalos-de-cima-e-lousa', 'idanha-a-velha', 'juncal-do-campo', 'lardosa', 'louriçal-do-campo', 'malpica-do-tejo', 'mata', 'monforte-da-beira', 'ninho-do-açor-e-sobral-do-campo', 'póvoa-de-rio-de-moinhos-e-cafede', 'salgueiro-do-campo', 'santo-andré-das-tojeiras', 'são-vicente-da-beira', 'sarzedas', 'sobral-do-campo', 'tinalhas'],
+                'covilha': ['aldeia-do-carvalho', 'aldeia-de-são-francisco-de-assis', 'barco-e-coutada', 'boidobra', 'cantar-galo-e-vila-do-carvalho', 'canhoso', 'casais-do-douro', 'castelo-novo', 'covilhã-e-canhoso', 'dominguiso', 'erada', 'ferro', 'orjais', 'ourondo', 'paul', 'peraboa', 'peso-e-vales-do-rio', 'sobral-de-são-miguel', 'tortosendo', 'unhais-da-serra', 'vale-formoso-e-aldeia-do-souto', 'verdelhos'],
+                'fundao': ['alcaide', 'alcaria', 'alcongosta', 'aldeia-de-joanes', 'aldeia-nova-do-cabo', 'alpedrinha', 'atalaia-do-campo', 'barroca', 'bogas-de-baixo', 'bogas-de-cima', 'capinha', 'casa-da-ribeira', 'castelo-novo', 'enxames', 'escarigo', 'fatela', 'fundão', 'janeiro-de-cima-e-bogas-de-baixo', 'lavacolhos', 'mata-da-rainha', 'pêro-viseu', 'póvoa-de-atalaia-e-atalaia-do-campo', 'salgueiro', 'silvares', 'soalheira', 'soito', 'telhado', 'três-povos', 'vale-de-prazeres-e-mata-da-rainha', 'valverde'],
+                'belmonte': ['belmonte-e-colmeal-da-torre', 'caria', 'colmeal-da-torre', 'maçainhas']
+            },
+            'coimbra': {
+                'coimbra': ['almalaguês', 'ameal', 'antanhol', 'antuzede-e-vil-de-matos', 'arzila', 'assafarge', 'botão', 'brasfemes', 'ceira', 'coimbra-almedina', 'coimbra-se', 'coimbra-santo-antónio-dos-olivais', 'coimbra-são-bartolomeu', 'coimbra-são-paulo-de-frades', 'coimbra-sé-nova', 'eiras-e-são-paulo-de-frades', 'lamarosa', 'ribeira-de-frades', 'santa-clara-e-castelo-viegas', 'santo-antónio-dos-olivais', 'são-joão-do-campo', 'são-martinho-do-bispo-e-ribeira-de-frades', 'são-silvestre', 'souselas-e-botão', 'taveiro-ameal-e-arzila', 'torres-do-mondego-e-mosteirô', 'trouxemil-e-torre-de-vilela', 'vil-de-matos'],
+                'figueira-da-foz': ['alqueidão', 'bom-sucesso', 'buarcos-e-são-julião', 'ferreira-a-nova', 'figueira-da-foz', 'lavos', 'maiorca', 'marinha-das-ondas', 'paião', 'quiaios', 'santa-clara', 'são-pedro', 'tavarede', 'vila-verde'],
+                'cantanhede': ['ançã', 'bolho', 'cadima', 'cantanhede-e-pocariça', 'cordinhã', 'covões-e-camarneira', 'febres', 'murtede', 'ourentã', 'outil', 'pocariça', 'queimada', 'rans', 'sepins-e-bolho', 'tocha', 'vilamar']
+            },
+            'evora': {
+                'evora': ['bacelo-e-senhora-da-saúde', 'canaviais', 'évora-malagueira-e-horta-das-figueiras', 'évora-se-e-são-pedro', 'graça-do-divor', 'horta-das-figueiras', 'malagueira', 'nossa-senhora-da-graça-do-divor', 'nossa-senhora-de-machede', 'são-bento-do-mato', 'são-manços-e-são-vicente-do-pigeiro', 'são-miguel-de-machede', 'são-sebastião-da-giesteira-e-nossa-senhora-da-boa-fé', 'torre-de-coelheiros'],
+                'estremoz': ['arcos', 'estremoz-santa-maria-e-santo-andré', 'évora-monte', 'glória', 'santa-vitória-do-ameixial', 'são-bento-de-ana-loura', 'são-domingos-de-ana-loura', 'são-lourenço-de-mamporcão', 'veiros'],
+                'montemor-o-novo': ['cabrela', 'cortiçadas-de-lavre-e-lavre', 'foros-de-vale-figueira', 'montemor-o-novo-e-silveiras', 'nossa-senhora-da-vila-nossa-senhora-do-bispo-e-silveiras', 'são-cristóvão', 'vendas-novas'],
+                'vendas-novas': ['landeira', 'marcação', 'vendas-novas']
+            },
             'faro': {
                 'faro': ['faro-se-e-estoi', 'montenegro', 'santa-barbara-de-nexe'],
                 'olhao': ['olhao', 'pechao', 'quelfes'],
@@ -224,6 +266,19 @@ class IdealistaScraper:
                 'castro-marim': ['azinhal', 'castro-marim', 'altura', 'monte-gordo'],
                 'vila-real-de-santo-antonio': ['monte-gordo', 'vila-nova-de-cacela', 'vila-real-de-santo-antonio']
             },
+            'guarda': {
+                'guarda': ['adão', 'albardo', 'aldeia-do-bispo-águas-e-aldeia-de-joão-pires', 'aldeia-viçosa', 'alvendre-e-concavada', 'avelãs-de-ambom-e-rocamondo', 'benespera', 'casal-de-cinza', 'castanheira', 'cavadoude', 'corujeira-e-trinta', 'famalicão-da-nazaré', 'faia', 'gonçalo', 'gonçalo-bocas-e-aguilar', 'guarda', 'jarmelo-são-miguel', 'jarmelo-são-pedro', 'João-antão', 'maçainhas', 'meios', 'mizarela', 'nogueira-do-cravo-e-pinheiro', 'os-cepos', 'panoias-de-cima', 'pega', 'pêra-do-moço', 'pinhel', 'pocinho', 'porto-da-carne', 'ramela', 'rocamondo', 'são-miguel-da-guarda', 'sé', 'valhelhas', 'vela', 'videmonte'],
+                'seia': ['alvoco-da-serra', 'cabeça', 'carragozela', 'folhadosa', 'girabolhos', 'loriga', 'manigoto', 'paranhos-da-beira', 'pinhanços', 'sabugueiro', 'santa-comba', 'santa-eulália', 'santiago', 'são-romão', 'seia-são-romão-e-lapa-dos-dinheiros', 'tourais-e-lapa-dos-dinheiros', 'travancinha', 'valdim', 'vide-entre-vinhas'],
+                'gouveia': ['aldeias-e-mangualde-da-serra', 'arcozelo-das-maias', 'cativelos-e-faia-da-água-alta', 'folgosinho', 'gouveia', 'mangualde-da-serra', 'melo-e-nabais', 'nespereira-e-casal-do-rei', 'paços-da-serra', 'ribamondego', 'rio-torto-e-arganil', 'unhais-o-velho', 'vila-cortês-da-serra', 'vila-franca-da-serra-e-moimenta-da-serra'],
+                'pinhel': ['alverca-da-beira-bouça-cova-e-freixo', 'atalaia', 'azevo', 'bouça-cova', 'cidadelhe', 'ervas-tenras-e-louçainha', 'freixedas', 'lamegal', 'leomil', 'pinhel', 'póvoa-de-el-rei', 'sorval', 'valbom']
+            },
+            'leiria': {
+                'leiria': ['amor', 'arrabal', 'azoia', 'barosa', 'bidoeira-de-cima', 'boa-vista', 'caranguejeira', 'carreira', 'chain', 'colmeias-e-memória', 'cortes', 'coimbrão', 'leiria-pousos-barreira-e-cortes', 'maceira', 'marrazes-e-barosa', 'milagres', 'monte-redondo-e-carreira', 'parceiros-e-azoia', 'pousos', 'regueira-de-pontes', 'santa-catarina-da-serra-e-chainça', 'santa-eufémia-e-boa-vista', 'souto-da-carpalhosa-e-ortigosa'],
+                'marinha-grande': ['marinha-grande'],
+                'batalha': ['batalha', 'são-mamede'],
+                'pombal': ['abiul', 'albergaria-dos-doze', 'carnide', 'carriço', 'guia-ilha-e-mata-mourisca', 'louriçal', 'pombal', 'redinha', 'santiago-de-litém-e-vermoil', 'vale-de-lobos'],
+                'alcobaca': ['alcobaça-e-vestiaria', 'alfeizerão', 'bárrio', 'benedita', 'cela', 'cós', 'évora-de-alcobaça', 'maiorga', 'martinha', 'montes', 'pataias-e-martingança', 'salir-de-matos', 'são-martinho-do-porto', 'turquel', 'vimeiro']
+            },
             'lisboa': {
                 'lisboa': ['ajuda', 'alcantara', 'alvalade', 'areeiro', 'arroios', 'avenidas-novas', 'beato', 'belem', 'benfica', 'campo-de-ourique', 'campolide', 'carnide', 'estrela', 'lumiar', 'mafra', 'marvila', 'misericordia', 'olivais', 'penha-de-franca', 'santa-clara', 'santa-maria-maior', 'santo-antonio', 'sao-domingos-de-benfica', 'sao-vicente'],
                 'cascais': ['alcabideche', 'carcavelos-e-parede', 'cascais-e-estoril', 'sao-domingos-de-rana'],
@@ -232,12 +287,87 @@ class IdealistaScraper:
                 'amadora': ['águeda-de-cima', 'alfragide', 'amadora', 'brandoa', 'buraca', 'damaia', 'falagueira-venda-nova', 'mina-de-água', 'pontinha', 'reboleira', 'são-brás', 'venteira'],
                 'loures': ['bucelas', 'camarate-unhos-e-apelação', 'fanhões', 'frielas', 'loures', 'lousa', 'moscavide-e-portela', 'sacavém-e-prior-velho', 'santa-iria-de-azóia-são-joão-da-talha-e-bobadela', 'santo-andré-e-verderena', 'santo-antão-e-são-julião-do-tojal', 'são-joão-da-talha', 'união-das-freguesias-de-moscavide-e-portela']
             },
+            'portalegre': {
+                'portalegre': ['alegrete', 'avis', 'carreiras', 'fortios', 'portalegre-se-e-são-lourenço', 'ribeira-de-nisa-e-carreiras', 'são-julião-e-são-brás', 'urra'],
+                'elvas': ['ajuda-salvador-e-santo-ildefonso', 'assunção-ajuda-salvador-e-santo-ildefonso', 'barbacena-e-vila-fernando', 'caia-são-pedro-e-alcáçova', 'santa-eulália', 'são-brás-e-são-lourenço', 'são-vicente-e-ventosa', 'terrugem-e-vila-boim'],
+                'campo-maior': ['campo-maior', 'degolados', 'nossa-senhora-da-expectação', 'são-joão-batista', 'santo-antónio-das-areias'],
+                'nisa': ['alpalhão', 'amieira-do-tejo', 'arez-e-amieira-do-tejo', 'espírito-santo', 'montalvão', 'nisa', 'santana', 'são-matias', 'tolosa']
+            },
             'porto': {
                 'porto': ['aldoar-foz-do-douro-e-nevogilde', 'bonfim', 'campanhã', 'cedofeita-santo-ildefonso-sé-miragaia-são-nicolau-e-vitória', 'lordelo-do-ouro-e-massarelos', 'paranhos', 'ramalde'],
                 'vila-nova-de-gaia': ['arcozelo', 'avintes', 'canelas', 'canidelo', 'crestuma', 'grijó-e-sermonde', 'gulpilhares-e-valadares', 'lever', 'madalena', 'mafamude-e-vilar-do-paraíso', 'oliveira-do-douro', 'pedroso-e-seixezelo', 'perosinho', 'sandim-olival-lever-e-crestuma', 'santa-marinha-e-são-pedro-da-afurada', 'são-félix-da-marinha', 'valadares', 'vilar-de-andorinho'],
                 'matosinhos': ['custóias-leça-do-balio-e-guifões', 'matosinhos-e-leça-da-palmeira', 'perafita-lavra-e-santa-cruz-do-bispo', 'são-mamede-de-infesta-e-senhora-da-hora'],
                 'gondomar': ['baguim-do-monte', 'covelo', 'fânzeres', 'gondomar-são-cosme-valbom-e-jovim', 'lomba', 'melres-e-medas', 'rio-tinto', 'são-pedro-da-cova', 'valbom'],
                 'maia': ['águas-santas', 'castêlo-da-maia', 'cidade-da-maia', 'folgosa', 'gemunde', 'gueifães', 'milheirós', 'moreira', 'nogueira-e-silva-escura', 'pedrouços', 'são-pedro-fins', 'vila-nova-da-telha']
+            },
+            'santarem': {
+                'santarem': ['abitureiras', 'achete-azoia-de-baixo-e-póvoa-de-santarém', 'alcanede', 'almoster', 'arneiro-das-milhariças', 'azoia-de-baixo', 'pernes', 'pombalinho', 'póvoa-da-isenta', 'romeira-e-várzea', 'santarém-marvila-santa-iria-da-ribeira-de-santarém-santarém-salvador-e-santarém-são-nicolau', 'são-vicente-do-paul-e-vale-de-figueira', 'tremês', 'vale-de-santarém', 'várzea'],
+                'torres-novas': ['asseiceira', 'brogueira-parceiros-de-igreja-e-alcaidaria', 'chancelaria', 'lapas-e-ribeira-branca', 'olaia', 'paço', 'pedrógão', 'riachos', 'são-pedro-da-cadeira', 'torres-novas-santa-maria-torres-novas-são-miguel-e-lapas', 'zibreira'],
+                'entroncamento': ['entroncamento'],
+                'tomar': ['alviobeira', 'asseiceira-rio-de-couros-e-casal-dos-bernardos', 'beselga', 'carregueiros', 'casais-e-alviobeira', 'madalena-e-beselga', 'olalhas', 'paialvo', 'pedreira', 'sabacheira', 'santa-cita', 'são-joão-batista', 'serra-e-junceira', 'tomar-santa-maria-dos-olivais']
+            },
+            'setubal': {
+                'setubal': ['gâmbia-pontes-alto-da-guerra', 'sado', 'setúbal-são-julião-nossa-senhora-da-anunciada-e-santa-maria-da-graça', 'setúbal-são-sebastião-são-simão'],
+                'barreiro': ['alto-do-seixalinho-santo-andré-e-verderena', 'barreiro', 'coina', 'lavradio', 'santo-andré', 'santo-antónio-da-charneca', 'verderena'],
+                'almada': ['almada-cova-da-piedade-pragal-e-cacilhas', 'caparica-e-trafaria', 'charneca-de-caparica-e-sobreda', 'costa-de-caparica', 'laranjeiro-e-feijó'],
+                'seixal': ['aldeia-de-paio-pires', 'amora', 'arrentela', 'corroios', 'fernão-ferro', 'seixal-arrentela-e-aldeia-de-paio-pires'],
+                'moita': ['alhos-vedros', 'baixa-da-banheira-e-vale-da-amoreira', 'gaio-rosário-e-sarilhos-pequenos', 'moita']
+            },
+            'viana-do-castelo': {
+                'viana-do-castelo': ['afife', 'alvarães', 'amonde', 'anha', 'areosa', 'barroselas-e-carvoeiro', 'cardielos-e-serreleis', 'carreço', 'castelo-do-neiva', 'chafé', 'darque', 'deão', 'freixieiro-de-soutelo', 'geraz-do-lima-santa-maria', 'geraz-do-lima-são-lourenço', 'lanheses', 'mazarefes-e-vila-fria', 'meadela', 'monserrate', 'montaria', 'neiva', 'nogueira-meixedo-e-vilar-de-murteda', 'outeiro', 'perre', 'portuzelo', 'subportela-deocriste-e-portela-susã', 'torre-e-vila-mou', 'viana-do-castelo-monserrate-e-meadela', 'vila-de-punhe', 'vila-franca', 'vila-mou'],
+                'ponte-de-lima': ['anta-e-gueral', 'arcozelo', 'ardegão-freixo-e-mato', 'beiral-do-lima', 'bertiandos', 'boivães', 'cabração-e-moreira-do-lima', 'calvelo', 'correlhã', 'estorãos', 'facha', 'fontão', 'fornelos-e-queijada', 'freixo', 'gandra-e-tamel-são-veríssimo', 'gemieira', 'gondufe', 'labruja', 'labrujó-rendufe-e-vilar-do-monte', 'lindoso', 'mato-e-queijada', 'moreira-do-lima-e-serreleis', 'navió', 'negreiros', 'ponte-de-lima', 'poiares-santo-andré', 'queijada', 'rebordões-souto-e-ribeira', 'refojos-do-lima', 'rendufe', 'ribeira', 'são-martinho-da-gândara', 'serdedelo', 'souto', 'vitorino-das-donas-e-vitorino-de-piães'],
+                'valenca': ['boivão', 'cristelo-covo-e-mosteiró', 'fontoura', 'gandra', 'ganfei', 'silva', 'são-julião-e-silva', 'são-pedro-da-torre', 'valença-cerdal-e-arão', 'verdoejo']
+            },
+            'vila-real': {
+                'vila-real': ['abaças', 'adoufe-e-vilarinho-de-samardã', 'argeriz', 'borbela-e-lamas-de-olo', 'campeã', 'constantim-e-vale-de-nogueiras', 'folhadela', 'gondar', 'guiães-e-cogula', 'lordelo', 'mateus', 'mouçós-e-lamares', 'NumÃo', 'parada-de-cunhos', 'pena', 'ribeira-de-pena', 'santa-marta-de-penaguião', 'santa-cruz-do-douro-e-são-tomé-de-covelas', 'são-dinis', 'são-pedro-das-águias', 'torgueda', 'vieira-do-minho', 'vila-marim', 'vila-real'],
+                'chaves': ['águas-frias-e-arcossó', 'aldeia-de-nacomba', 'anelhe', 'calvão-e-soutelinho-da-raia', 'casas-novas', 'chaves-santa-cruz-trindade-e-sanjurge', 'chaves-santa-maria-maior', 'ervededo', 'faiões-e-vila-verde-da-raia', 'lama-de-arcos', 'loivos', 'mairos', 'moreiras', 'oucidres-e-paiágua', 'outeiro-seco', 'paradela', 'pastoria-e-sobrado', 'póvoa-de-agrações', 'roriz', 'sapiãos', 'seara-velha', 'soutelo', 'soutelinho-da-raia', 'tronco', 'vale-de-anta-e-sendim-da-ribeira', 'vidago-arcossó-telões-e-lama-de-arcos', 'vilar-de-nantes', 'vilela-do-tâmega', 'vincent']
+            },
+            'viseu': {
+                'viseu': ['abraveses', 'bodiosa', 'boa-aldeia-farminhão-e-toutosa', 'cavernães', 'côta', 'fragosela', 'lordosa', 'mouronho', 'mundão', 'orgens', 'povolide', 'quarteirão', 'repeses-e-são-salvador', 'rio-de-loba', 'santos-evos', 'silgueiros', 'vale-de-besteiros', 'ventosa', 'viseu']
+            },
+            # Açores
+            'corvo': {
+                'corvo': ['corvo']
+            },
+            'faial': {
+                'horta': ['angústias', 'conceição', 'flamengos', 'horta', 'matriz', 'pedro-miguel', 'praia-do-almoxarife', 'praia-do-norte', 'ribeirinha', 'salão'],
+                'castelo-branco': ['castelo-branco', 'cedros', 'ribeira-do-cabo']
+            },
+            'flores': {
+                'flores': ['fazenda', 'fajã-grande', 'fajãzinha', 'lajes-das-flores', 'lomba', 'ponta-delgada', 'santa-cruz']
+            },
+            'graciosa': {
+                'graciosa': ['guadalupe', 'luz', 'praia', 'santa-cruz-da-graciosa']
+            },
+            'pico': {
+                'lajes-do-pico': ['lajes-do-pico', 'piedade', 'ribeiras', 'santo-amaro'],
+                'madalena': ['bandeiras', 'criação-velha', 'madalena', 'são-caetano'],
+                'são-roque-do-pico': ['candelária', 'prainha', 'santa-luzia', 'santo-antónio', 'são-roque']
+            },
+            'santa-maria': {
+                'vila-do-porto': ['almagreira', 'santo-espírito', 'são-pedro', 'vila-do-porto']
+            },
+            'são-jorge': {
+                'calheta': ['calheta', 'ribeira-seca', 'santo-antão'],
+                'velas': ['manadas', 'norte-grande', 'rosais', 'são-jorge', 'urzelina', 'velas']
+            },
+            'são-miguel': {
+                'ponta-delgada': ['ajuda-da-bretanha', 'arrifes', 'candelária', 'capelas', 'fajã-de-baixo', 'fajã-de-cima', 'fenais-da-luz', 'ginetes', 'livramento', 'mosteiros', 'pilar-da-bretanha', 'ponta-delgada', 'relva', 'remédios', 'são-josé', 'são-pedro', 'são-roque', 'são-sebastião', 'são-vicente-ferreira', 'sete-cidades'],
+                'ribeira-grande': ['calhetas', 'fenais-da-ajuda', 'lomba-da-maia', 'lomba-de-são-pedro', 'maia', 'matriz', 'pedro-teixeira', 'pico-da-pedra', 'porto-formoso', 'rabo-de-peixe', 'ribeira-grande', 'ribeira-seca', 'santa-bárbara', 'são-brás'],
+                'lagoa': ['água-de-pau', 'atalhada', 'cabouco', 'lagoa', 'nossa-senhora-do-rosário', 'ribeira-chã', 'santa-cruz']
+            },
+            'terceira': {
+                'angra-do-heroísmo': ['altares', 'angra-do-heroísmo', 'cinco-ribeiras', 'doze-ribeiras', 'feteira', 'posto-santo', 'quatro-ribeiras', 'raminho', 'ribeirinha', 'santa-bárbara', 'santa-luzia', 'são-bartolomeu-dos-regatos', 'são-bento', 'são-mateus-da-calheta', 'serreta', 'terra-chã'],
+                'praia-da-vitória': ['agualva', 'biscoitos', 'cabo-da-praia', 'fonte-do-bastardo', 'fontinhas', 'lajes', 'porto-martins', 'praia-da-vitória', 'quatro-ribeiras', 'são-brás', 'vila-nova']
+            },
+            # Madeira
+            'madeira': {
+                'funchal': ['imaculado-coração-de-maria', 'monte', 'são-gonçalo', 'são-martinho', 'são-pedro', 'santo-antónio', 'sé'],
+                'câmara-de-lobos': ['câmara-de-lobos', 'curral-das-freiras', 'estreito-de-câmara-de-lobos', 'jardim-da-serra', 'quinta-grande'],
+                'santa-cruz': ['água-de-pena', 'camacha', 'caniço', 'gaula', 'santa-cruz', 'santo-da-serra']
+            },
+            'porto-santo': {
+                'porto-santo': ['porto-santo']
             }
         }
         
