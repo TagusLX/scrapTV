@@ -801,7 +801,7 @@ async def get_region_stats():
 
 @api_router.get("/export/php")
 async def export_php_format():
-    """Export data in PHP array format like the original file"""
+    """Export data in PHP array format with price per m² as main values"""
     stats = await get_region_stats()
     
     php_array = {}
@@ -809,17 +809,17 @@ async def export_php_format():
         region = stat.region
         if region not in php_array:
             php_array[region] = {
-                'average': stat.avg_sale_price or 0,
-                'average_rent': stat.avg_rent_price or 0
+                'average': stat.avg_sale_price_per_sqm or 0,  # €/m² for sales
+                'average_rent': stat.avg_rent_price_per_sqm or 0  # €/m² for rentals
             }
         
-        # Add location data
+        # Add location data with price per m²
         if stat.location != region:
             location_key = stat.location.replace('-', '_')
             php_array[region][location_key] = {
                 'name': stat.location.title(),
-                'average': stat.avg_sale_price or 0,
-                'average_rent': stat.avg_rent_price or 0
+                'average': stat.avg_sale_price_per_sqm or 0,  # €/m² for sales
+                'average_rent': stat.avg_rent_price_per_sqm or 0  # €/m² for rentals
             }
     
     return {"php_array": php_array}
