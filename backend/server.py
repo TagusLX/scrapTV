@@ -136,6 +136,116 @@ class IdealistaScraper:
     def __init__(self):
         self.driver = None
         self.session_id = None
+        self.administrative_structure = {}
+        
+    async def get_administrative_structure(self):
+        """Get complete Portuguese administrative structure from idealista reports"""
+        logger.info("Fetching Portuguese administrative structure from idealista.pt")
+        
+        try:
+            # First, try to get the structure from the reports page
+            reports_url = "https://www.idealista.pt/media/relatorios-preco-habitacao/venda/report/"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'pt-PT,pt;q=0.9,en;q=0.8',
+            }
+            
+            # Try with requests first
+            response = requests.get(reports_url, headers=headers, timeout=15)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                
+                # Look for administrative structure in the page
+                # This might be in dropdowns, links, or structured data
+                districts_found = set()
+                municipalities_found = {}
+                parishes_found = {}
+                
+                # Extract from links with the pattern /venda/distrito/concelho/freguesia/
+                links = soup.find_all('a', href=True)
+                for link in links:
+                    href = link['href']
+                    if '/media/relatorios-preco-habitacao/venda/' in href:
+                        # Parse the path: /venda/distrito/concelho/freguesia/
+                        parts = href.split('/')
+                        if len(parts) >= 7:  # /media/relatorios-preco-habitacao/venda/distrito/concelho/freguesia/
+                            distrito = parts[5] if len(parts) > 5 else None
+                            concelho = parts[6] if len(parts) > 6 else None
+                            freguesia = parts[7] if len(parts) > 7 else None
+                            
+                            if distrito and concelho:
+                                districts_found.add(distrito)
+                                if distrito not in municipalities_found:
+                                    municipalities_found[distrito] = set()
+                                municipalities_found[distrito].add(concelho)
+                                
+                                if freguesia:
+                                    key = f"{distrito}-{concelho}"
+                                    if key not in parishes_found:
+                                        parishes_found[key] = set()
+                                    parishes_found[key].add(freguesia)
+                
+                # Convert to the structure we need
+                structure = {}
+                for distrito in districts_found:
+                    structure[distrito] = {}
+                    if distrito in municipalities_found:
+                        for concelho in municipalities_found[distrito]:
+                            key = f"{distrito}-{concelho}"
+                            if key in parishes_found:
+                                structure[distrito][concelho] = list(parishes_found[key])
+                            else:
+                                structure[distrito][concelho] = [concelho]  # Use concelho as freguesia if no freguesias found
+                
+                if structure:
+                    logger.info(f"Found {len(structure)} districts from idealista reports")
+                    self.administrative_structure = structure
+                    return structure
+            
+            logger.warning("Could not fetch administrative structure from idealista, using fallback")
+            
+        except Exception as e:
+            logger.error(f"Error fetching administrative structure: {e}")
+        
+        # Fallback: Use comprehensive Portuguese administrative structure
+        fallback_structure = {
+            'faro': {
+                'faro': ['faro-se-e-estoi', 'montenegro', 'santa-barbara-de-nexe'],
+                'olhao': ['olhao', 'pechao', 'quelfes'],
+                'tavira': ['conceicao-e-cabanas-de-tavira', 'luz-de-tavira-e-santo-estevao', 'santa-catarina-da-fonte-do-bispo', 'santa-luzia', 'santiago-tavira', 'tavira-santa-maria-e-santiago'],
+                'albufeira': ['albufeira-e-olhos-de-agua', 'ferreiras', 'guia', 'paderne'],
+                'portimao': ['portimao', 'alvor'],
+                'lagoa': ['carvoeiro', 'estombar-e-parchal', 'ferragudo', 'lagoa-e-carvoeiro'],
+                'silves': ['alcantarilha-e-pera', 'algoz-e-tunes', 'armacao-de-pera', 'silves'],
+                'lagos': ['bensafrim-e-barrao-de-sao-joao', 'luz', 'odiaxere', 'santa-maria', 'sao-goncalo-de-lagos'],
+                'vila-do-bispo': ['budens', 'raposeira', 'sagres', 'vila-do-bispo-e-raposeira'],
+                'aljezur': ['aljezur', 'bordeira', 'carrapateira', 'odeceixe'],
+                'monchique': ['alferce', 'marmelete', 'monchique'],
+                'castro-marim': ['azinhal', 'castro-marim', 'altura', 'monte-gordo'],
+                'vila-real-de-santo-antonio': ['monte-gordo', 'vila-nova-de-cacela', 'vila-real-de-santo-antonio']
+            },
+            'lisboa': {
+                'lisboa': ['ajuda', 'alcantara', 'alvalade', 'areeiro', 'arroios', 'avenidas-novas', 'beato', 'belem', 'benfica', 'campo-de-ourique', 'campolide', 'carnide', 'estrela', 'lumiar', 'mafra', 'marvila', 'misericordia', 'olivais', 'penha-de-franca', 'santa-clara', 'santa-maria-maior', 'santo-antonio', 'sao-domingos-de-benfica', 'sao-vicente'],
+                'cascais': ['alcabideche', 'carcavelos-e-parede', 'cascais-e-estoril', 'sao-domingos-de-rana'],
+                'sintra': ['agualva-e-mira-sintra', 'algueirão-mem-martins', 'almargem-do-bispo-pêro-pinheiro-e-montelavar', 'belas', 'cacém-e-são-marcos', 'casal-de-cambra', 'colares', 'massamá-e-monte-abraão', 'queluz-e-belas', 'rio-de-mouro', 'santa-maria-e-são-miguel', 'santana-e-são-pedro', 'sintra-santa-maria-e-são-miguel', 'são-joão-das-lampas-e-terrugem'],
+                'oeiras': ['algés-linda-a-velha-e-cruz-quebrada-dafundo', 'barcarena', 'carnaxide-e-queijas', 'oeiras-e-são-julião-da-barra-paço-de-arcos-e-caxias', 'porto-salvo'],
+                'amadora': ['águeda-de-cima', 'alfragide', 'amadora', 'brandoa', 'buraca', 'damaia', 'falagueira-venda-nova', 'mina-de-água', 'pontinha', 'reboleira', 'são-brás', 'venteira'],
+                'loures': ['bucelas', 'camarate-unhos-e-apelação', 'fanhões', 'frielas', 'loures', 'lousa', 'moscavide-e-portela', 'sacavém-e-prior-velho', 'santa-iria-de-azóia-são-joão-da-talha-e-bobadela', 'santo-andré-e-verderena', 'santo-antão-e-são-julião-do-tojal', 'são-joão-da-talha', 'união-das-freguesias-de-moscavide-e-portela']
+            },
+            'porto': {
+                'porto': ['aldoar-foz-do-douro-e-nevogilde', 'bonfim', 'campanhã', 'cedofeita-santo-ildefonso-sé-miragaia-são-nicolau-e-vitória', 'lordelo-do-ouro-e-massarelos', 'paranhos', 'ramalde'],
+                'vila-nova-de-gaia': ['arcozelo', 'avintes', 'canelas', 'canidelo', 'crestuma', 'grijó-e-sermonde', 'gulpilhares-e-valadares', 'lever', 'madalena', 'mafamude-e-vilar-do-paraíso', 'oliveira-do-douro', 'pedroso-e-seixezelo', 'perosinho', 'sandim-olival-lever-e-crestuma', 'santa-marinha-e-são-pedro-da-afurada', 'são-félix-da-marinha', 'valadares', 'vilar-de-andorinho'],
+                'matosinhos': ['custóias-leça-do-balio-e-guifões', 'matosinhos-e-leça-da-palmeira', 'perafita-lavra-e-santa-cruz-do-bispo', 'são-mamede-de-infesta-e-senhora-da-hora'],
+                'gondomar': ['baguim-do-monte', 'covelo', 'fânzeres', 'gondomar-são-cosme-valbom-e-jovim', 'lomba', 'melres-e-medas', 'rio-tinto', 'são-pedro-da-cova', 'valbom'],
+                'maia': ['águas-santas', 'castêlo-da-maia', 'cidade-da-maia', 'folgosa', 'gemunde', 'gueifães', 'milheirós', 'moreira', 'nogueira-e-silva-escura', 'pedrouços', 'são-pedro-fins', 'vila-nova-da-telha']
+            }
+        }
+        
+        logger.info(f"Using fallback administrative structure with {len(fallback_structure)} districts")
+        self.administrative_structure = fallback_structure
+        return fallback_structure
         
     def setup_driver(self):
         """Setup Selenium Chrome driver for ARM64 architecture"""
