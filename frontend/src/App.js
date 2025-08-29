@@ -417,6 +417,27 @@ function tagus_value_get_market_data() {
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* Coverage Stats */}
+            {coverageStats && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg">
+                <h3 className="font-semibold mb-2">Couverture Administrative</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Distritos:</span> {coverageStats.covered_districts}/{coverageStats.total_districts}
+                  </div>
+                  <div>
+                    <span className="font-medium">Concelhos:</span> {coverageStats.covered_municipalities}/{coverageStats.total_municipalities}
+                  </div>
+                  <div>
+                    <span className="font-medium">Freguesias:</span> {coverageStats.covered_parishes}/{coverageStats.total_parishes}
+                  </div>
+                  <div>
+                    <span className="font-medium">Couverture:</span> <strong>{coverageStats.overall_coverage_percentage}%</strong>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -492,65 +513,6 @@ function tagus_value_get_market_data() {
           </TabsContent>
 
           <TabsContent value="sessions">
-            <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>Historique des Sessions de Scraping</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {scrapingSessions.map((session) => (
-                    <div key={session.id} className="p-4 border rounded-lg bg-white/50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Session {session.id.slice(0, 8)}</p>
-                          <p className="text-sm text-gray-600">
-                            Démarrée: {new Date(session.started_at).toLocaleString('fr-FR')}
-                          </p>
-                          {session.completed_at && (
-                            <p className="text-sm text-gray-600">
-                              Terminée: {new Date(session.completed_at).toLocaleString('fr-FR')}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={getStatusBadgeColor(session.status)}>
-                            {getStatusText(session.status)}
-                          </Badge>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {session.total_properties} propriétés
-                          </p>
-                        </div>
-                      </div>
-                      {session.error_message && (
-                        <Alert className="mt-3">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription>{session.error_message}</AlertDescription>
-                        </Alert>
-                      )}
-                      {session.status === 'waiting_captcha' && (
-                        <div className="mt-3 flex items-center gap-2">
-                          <Camera className="h-4 w-4 text-orange-600" />
-                          <span className="text-sm text-orange-600 font-medium">
-                            En attente de résolution CAPTCHA
-                          </span>
-                          {session.id === captchaSession?.id && (
-                            <Button
-                              size="sm"
-                              onClick={() => setShowCaptchaDialog(true)}
-                              className="ml-2"
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              Voir CAPTCHA
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
             <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle>Historique des Sessions de Scraping</CardTitle>
