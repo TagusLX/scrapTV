@@ -339,6 +339,24 @@ function tagus_value_get_market_data() {
     }
   };
 
+  const generateIdealistaURL = (region, location, operationType) => {
+    if (!region || !location) return null;
+    
+    const opPath = operationType === 'sale' ? 'venda' : 'arrendamento';
+    const distrito = region.toLowerCase().replace(' ', '-');
+    
+    // Parse location (formato: concelho_freguesia)
+    if (location.includes('_')) {
+      const [concelho, freguesia] = location.split('_', 2);
+      const cleanConcelho = concelho.toLowerCase().replace(' ', '-');
+      const cleanFreguesia = freguesia.toLowerCase().replace(' ', '-').replace(' ', '-');
+      return `https://www.idealista.pt/media/relatorios-preco-habitacao/${opPath}/${distrito}/${cleanConcelho}/${cleanFreguesia}/`;
+    } else {
+      const cleanLocation = location.toLowerCase().replace(' ', '-');
+      return `https://www.idealista.pt/media/relatorios-preco-habitacao/${opPath}/${distrito}/${cleanLocation}/`;
+    }
+  };
+
   // Effect to fetch data when filters change
   useEffect(() => {
     applyFilters();
