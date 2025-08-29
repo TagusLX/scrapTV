@@ -1351,11 +1351,106 @@ async def run_missing_scraping_task(session_id: str, distrito: str, missing_area
             }}
         )
 
-@api_router.delete("/properties")
-async def clear_all_properties():
-    """Clear all scraped properties"""
-    result = await db.properties.delete_many({})
-    return {"message": f"Deleted {result.deleted_count} properties"}
+@api_router.get("/administrative/districts")
+async def get_districts():
+    """Get all available districts"""
+    if not scraper.administrative_structure:
+        await scraper.get_administrative_structure()
+    
+    districts = []
+    for district_name in scraper.administrative_structure.keys():
+        districts.append({
+            'id': district_name,
+            'name': district_name.replace('-', ' ').title(),
+            'name_display': district_name.replace('-', ' ').title()
+        })
+    
+    return {"districts": sorted(districts, key=lambda x: x['name'])}
+
+@api_router.get("/administrative/districts/{district}/concelhos")
+async def get_concelhos(district: str):
+    """Get all concelhos for a specific district"""
+    if not scraper.administrative_structure:
+        await scraper.get_administrative_structure()
+    
+    if district not in scraper.administrative_structure:
+        raise HTTPException(status_code=404, detail=f"District {district} not found")
+    
+    concelhos = []
+    for concelho_name in scraper.administrative_structure[district].keys():
+        concelhos.append({
+            'id': concelho_name,
+            'name': concelho_name.replace('-', ' ').title(),
+            'name_display': concelho_name.replace('-', ' ').title()
+        })
+    
+    return {
+        "district": district.replace('-', ' ').title(),
+        "concelhos": sorted(concelhos, key=lambda x: x['name'])
+    }
+
+@api_router.get("/administrative/districts/{district}/concelhos/{concelho}/freguesias")
+async def get_freguesias(district: str, concelho: str):
+    """Get all freguesias for a specific distrito/concelho"""
+    if not scraper.administrative_structure:
+        await scraper.get_administrative_structure()
+    
+    if district not in scraper.administrative_structure:
+        raise HTTPException(status_code=404, detail=f"District {district} not found")
+    
+    if concelho not in scraper.administrative_structure[district]:
+        raise HTTPException(status_code=404, detail=f"Concelho {concelho} not found in {district}")
+    
+    freguesias = []
+    for freguesia_name in scraper.administrative_structure[district][concelho]:
+        freguesias.append({
+            'id': freguesia_name,
+            'name': freguesia_name.replace('-', ' ').replace('_', ' ').title(),
+            'name_display': format_freguesia_name(freguesia_name)
+        })
+    
+    return {
+        "district": district.replace('-', ' ').title(),
+        "concelho": concelho.replace('-', ' ').title(), 
+        "freguesias": sorted(freguesias, key=lambda x: x['name'])
+    }
+
+def format_freguesia_name(name):
+    """Format freguesia name for display"""
+    # Replace hyphens and underscores with spaces
+    formatted = name.replace('-', ' ').replace('_', ' ')
+    
+    # Handle special cases for Portuguese names
+    words = formatted.split()
+    formatted_words = []
+    
+    for word in words:
+        # Keep lowercase for Portuguese articles and prepositions
+        if word.lower() in ['e', 'de', 'da', 'do', 'das', 'dos', 'a', 'o', 'as', 'os', 'em', 'na', 'no', 'nas', 'nos']:
+            formatted_words.append(word.lower())
+        else:
+            formatted_words.append(word.capitalize())
+    
+    return ' '.join(formatted_words)
+
+def format_administrative_display(region, location):
+    """Format administrative location for display"""
+    # Parse the location (formato: concelho_freguesia)
+    if '_' in location:
+        concelho, freguesia = location.split('_', 1)
+        return {
+            'distrito': region.replace('-', ' ').title(),
+            'concelho': concelho.replace('-', ' ').title(),
+            'freguesia': format_freguesia_name(freguesia),
+            'full_display': f"{region.replace('-', ' ').title()} > {concelho.replace('-', ' ').title()} > {format_freguesia_name(freguesia)}"
+        }
+    else:
+        return {
+            'distrito': region.replace('-', ' ').title(),
+            'concelho': location.replace('-', ' ').title(),
+            'freguesia': '',
+            'full_display': f"{region.replace('-', ' ').title()} > {location.replace('-', ' ').title()}"
+        }
 
 # Include the router in the main app
 app.include_router(api_router)
