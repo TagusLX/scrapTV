@@ -582,7 +582,7 @@ function tagus_value_get_market_data() {
                     <SelectValue placeholder="Sélectionner un distrito" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les distritos</SelectItem>
+                    <SelectItem value="all">Tous les distritos</SelectItem>
                     {districts.map((distrito) => (
                       <SelectItem key={distrito.id} value={distrito.id}>
                         {distrito.name_display}
