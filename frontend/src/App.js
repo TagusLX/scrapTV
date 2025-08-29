@@ -599,7 +599,7 @@ function tagus_value_get_market_data() {
               <div className="space-y-2">
                 <Label>Concelho</Label>
                 <Select 
-                  value={selectedConcelho} 
+                  value={selectedConcelho || "all"}
                   onValueChange={handleConcelhoChange}
                   disabled={!selectedDistrito}
                 >
