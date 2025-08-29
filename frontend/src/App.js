@@ -770,42 +770,75 @@ function tagus_value_get_market_data() {
                     {regionStats.slice(0, 6).map((stat, index) => {
                       const saleURL = generateIdealistaURL(stat.region, stat.location, 'sale');
                       const rentURL = generateIdealistaURL(stat.region, stat.location, 'rent');
+                      const propertyURLs = generatePropertyTypeURLs(stat.region, stat.location);
                       
                       return (
                         <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                           <h4 className="font-semibold text-gray-900 mb-3">
                             {stat.display_info ? stat.display_info.full_display : `${stat.region} - ${stat.location}`}
                           </h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center justify-between">
-                              <span>Vente: {stat.avg_sale_price_per_sqm ? `${stat.avg_sale_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</span>
-                              {saleURL && (
-                                <a 
-                                  href={saleURL} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
-                                  title="Voir sur Idealista.pt"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
+                          <div className="space-y-3 text-sm">
+                            {/* Vente */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-blue-800">Vente: {stat.avg_sale_price_per_sqm ? `${stat.avg_sale_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</span>
+                                {saleURL && (
+                                  <a 
+                                    href={saleURL} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
+                                    title="Voir les ventes sur Idealista.pt"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                              </div>
+                              {propertyURLs.sale && (
+                                <div className="flex gap-1 text-xs">
+                                  <a href={propertyURLs.sale.apartments} target="_blank" rel="noopener noreferrer" 
+                                     className="text-blue-500 hover:underline" title="Appartements">App</a>
+                                  <span>•</span>
+                                  <a href={propertyURLs.sale.houses} target="_blank" rel="noopener noreferrer"
+                                     className="text-blue-500 hover:underline" title="Maisons">Maisons</a>
+                                  <span>•</span>
+                                  <a href={propertyURLs.sale.urbanLand} target="_blank" rel="noopener noreferrer"
+                                     className="text-blue-500 hover:underline" title="Terrains urbains">T.Urb</a>
+                                  <span>•</span>
+                                  <a href={propertyURLs.sale.ruralLand} target="_blank" rel="noopener noreferrer"
+                                     className="text-blue-500 hover:underline" title="Terrains agricoles">T.Agr</a>
+                                </div>
                               )}
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span>Location: {stat.avg_rent_price_per_sqm ? `${stat.avg_rent_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</span>
-                              {rentURL && (
-                                <a 
-                                  href={rentURL} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
-                                  title="Voir sur Idealista.pt"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
+
+                            {/* Location */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-green-800">Location: {stat.avg_rent_price_per_sqm ? `${stat.avg_rent_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</span>
+                                {rentURL && (
+                                  <a 
+                                    href={rentURL} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="ml-2 text-green-600 hover:text-green-800 transition-colors"
+                                    title="Voir les locations sur Idealista.pt"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                              </div>
+                              {propertyURLs.rent && (
+                                <div className="flex gap-1 text-xs">
+                                  <a href={propertyURLs.rent.apartments} target="_blank" rel="noopener noreferrer"
+                                     className="text-green-500 hover:underline" title="Appartements location">App</a>
+                                  <span>•</span>
+                                  <a href={propertyURLs.rent.houses} target="_blank" rel="noopener noreferrer"
+                                     className="text-green-500 hover:underline" title="Maisons location">Maisons</a>
+                                </div>
                               )}
                             </div>
-                            <p className="pt-1 border-t border-blue-200">Zones Prix: {stat.total_properties}</p>
+
+                            <p className="pt-2 border-t border-blue-200 text-gray-600">Zones Prix: {stat.total_properties}</p>
                           </div>
                         </div>
                       );
