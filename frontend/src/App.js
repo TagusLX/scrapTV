@@ -621,7 +621,7 @@ function tagus_value_get_market_data() {
               <div className="space-y-2">
                 <Label>Freguesia</Label>
                 <Select 
-                  value={selectedFreguesia} 
+                  value={selectedFreguesia || "all"}
                   onValueChange={handleFrequesiaChange}
                   disabled={!selectedConcelho}
                 >
