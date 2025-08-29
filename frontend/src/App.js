@@ -626,7 +626,7 @@ function tagus_value_get_market_data() {
                     <SelectValue placeholder="Sélectionner une freguesia" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes les freguesias</SelectItem>
+                    <SelectItem value="all">Toutes les freguesias</SelectItem>
                     {freguesias.map((freguesia) => (
                       <SelectItem key={freguesia.id} value={freguesia.id}>
                         {freguesia.name_display}
