@@ -150,7 +150,7 @@ class IdealistaScraperAPITester:
         return False
 
     def test_export_php(self):
-        """Test PHP export functionality"""
+        """Test PHP export functionality with hierarchical naming"""
         success, response = self.run_test(
             "Export PHP Data",
             "GET",
@@ -160,9 +160,27 @@ class IdealistaScraperAPITester:
         if success and 'php_array' in response:
             php_data = response['php_array']
             print(f"   PHP array contains {len(php_data)} regions")
+            
+            # Test hierarchical structure
             if php_data:
                 sample_region = list(php_data.keys())[0]
                 print(f"   Sample region: {sample_region}")
+                
+                # Check if the structure has the expected hierarchy
+                region_data = php_data[sample_region]
+                if 'freguesias' in region_data:
+                    print(f"   Region has {len(region_data['freguesias'])} concelhos")
+                    if region_data['freguesias']:
+                        sample_concelho = list(region_data['freguesias'].keys())[0]
+                        concelho_data = region_data['freguesias'][sample_concelho]
+                        if 'freguesias' in concelho_data:
+                            print(f"   Concelho {sample_concelho} has {len(concelho_data['freguesias'])} freguesias")
+                            
+                            # Test hierarchical naming format
+                            if concelho_data['freguesias']:
+                                sample_freguesia = list(concelho_data['freguesias'].keys())[0]
+                                print(f"   Sample hierarchical path: {sample_region} > {sample_concelho} > {sample_freguesia}")
+                                
             return True
         return False
 
