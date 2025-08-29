@@ -498,7 +498,9 @@ function tagus_value_get_market_data() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {regionStats.slice(0, 6).map((stat, index) => (
                       <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                        <h4 className="font-semibold capitalize text-gray-900">{stat.region} - {stat.location}</h4>
+                        <h4 className="font-semibold text-gray-900">
+                          {stat.display_info ? stat.display_info.full_display : `${stat.region} - ${stat.location}`}
+                        </h4>
                         <div className="space-y-1 text-sm">
                           <p>Vente: {stat.avg_sale_price_per_sqm ? `${stat.avg_sale_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</p>
                           <p>Location: {stat.avg_rent_price_per_sqm ? `${stat.avg_rent_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</p>
