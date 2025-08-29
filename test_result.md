@@ -119,6 +119,9 @@ The user requested enhancements to an existing real estate data scraping applica
         - working: true
           agent: "main"
           comment: "PHP export endpoint `/api/export/php` already uses clean hierarchical formatting via `format_administrative_display()` function. Creates properly formatted names like 'Faro > Silves > Algoz e Tunes'. No changes needed."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: PHP export endpoint working perfectly. Returns hierarchical structure with proper formatting (e.g., 'Faro > Aljezur > Aljezur'). Contains 6 regions with complete distrito > concelho > freguesia hierarchy. Average prices calculated correctly at all levels."
   
   - task: "Administrative Data Endpoints"
     implemented: true
