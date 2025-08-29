@@ -192,8 +192,23 @@ The user requested enhancements to an existing real estate data scraping applica
   test_all: false
   test_priority: "high_first"
 
+## backend:
+  - task: "URL Correction in Scraping System"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: URL correction verified successfully. The scraping system now uses correct URL patterns. For 'Faro > Tavira > Conceicao e Cabanas de Tavira': Sale URL: https://www.idealista.pt/comprar-casas/tavira/conceicao-e-cabanas-de-tavira/, Rent URL: https://www.idealista.pt/arrendar-casas/tavira/conceicao-e-cabanas-de-tavira/com-arrendamento-longa-duracao/. All URL patterns verified: General sales (/comprar-casas/), Apartments (/com-apartamentos/), Houses (/com-moradias/), Urban land (/com-terreno-urbano/), Rural land (/com-terreno-nao-urbanizavel/), General rentals (/com-arrendamento-longa-duracao/), Apartment rentals (/com-apartamentos,arrendamento-longa-duracao/), House rentals (/com-moradias,arrendamento-longa-duracao/). No old '/media/relatorios-preco-habitacao/' format found in scraping URLs. Administrative structure endpoints confirmed 'Conceicao e Cabanas de Tavira' is available in Faro/Tavira."
+
 ## agent_communication:
     - agent: "main"
       message: "✅ COMPLETE SUCCESS! All user requirements implemented and tested. PHP export already used clean hierarchical names. Frontend filtering system implemented and working perfectly. Fixed SelectItem empty value bug. Application fully functional with cascading district/concelho/freguesia filtering across all tabs."
     - agent: "testing"
       message: "✅ BACKEND TESTING COMPLETE: All 19 backend tests passed successfully. Administrative endpoints (GET /api/administrative/districts, /api/administrative/districts/{district}/concelhos, /api/administrative/districts/{district}/concelhos/{concelho}/freguesias) are working perfectly with proper hierarchical naming format. Filtering endpoints (GET /api/properties/filter, GET /api/stats/filter) support all required parameters and return properly formatted responses with display_info containing full_display hierarchical names. PHP export endpoint (GET /api/export/php) returns complete hierarchical structure with correct formatting. All endpoints handle error cases properly (404 for invalid districts/concelhos). The backend is fully ready for frontend integration. Hierarchical naming format confirmed throughout: 'Distrito > Concelho > Freguesia' (e.g., 'Faro > Aljezur > Aljezur')."
+    - agent: "testing"
+      message: "✅ URL CORRECTION TESTING COMPLETE: Verified that the backend scraping system uses correct URL patterns and no longer uses the old '/media/relatorios-preco-habitacao/' format. For the test case 'Faro > Tavira > Conceicao e Cabanas de Tavira', the system generates correct URLs: Sale: https://www.idealista.pt/comprar-casas/tavira/conceicao-e-cabanas-de-tavira/, Rent: https://www.idealista.pt/arrendar-casas/tavira/conceicao-e-cabanas-de-tavira/com-arrendamento-longa-duracao/. All 8 URL patterns tested and verified correct. Administrative structure confirmed target freguesia exists. The scrape_freguesia function in server.py correctly implements the new URL format for all property types (general sales, apartments, houses, urban land, rural land, general rentals, apartment rentals, house rentals). URL correction implementation is working perfectly."
