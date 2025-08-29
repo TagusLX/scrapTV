@@ -324,6 +324,8 @@ function tagus_value_get_market_data() {
     fetchProperties();
     fetchRegionStats();
   };
+
+  const clearAllData = async () => {
     try {
       await axios.delete(`${API}/properties`);
       setProperties([]);
