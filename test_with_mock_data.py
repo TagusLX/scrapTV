@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import uuid
 
 class MockDataTester:
-    def __init__(self, base_url="https://property-data-fetch.preview.emergentagent.com"):
+    def __init__(self, base_url="https://realestate-scraper.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
 
