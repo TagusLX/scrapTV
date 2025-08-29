@@ -604,7 +604,7 @@ function tagus_value_get_market_data() {
                     <SelectValue placeholder="Sélectionner un concelho" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les concelhos</SelectItem>
+                    <SelectItem value="all">Tous les concelhos</SelectItem>
                     {concelhos.map((concelho) => (
                       <SelectItem key={concelho.id} value={concelho.id}>
                         {concelho.name_display}
