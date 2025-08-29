@@ -580,7 +580,7 @@ function tagus_value_get_market_data() {
               {/* Distrito Filter */}
               <div className="space-y-2">
                 <Label>Distrito</Label>
-                <Select value={selectedDistrito} onValueChange={handleDistritoChange}>
+                <Select value={selectedDistrito || "all"} onValueChange={handleDistritoChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un distrito" />
                   </SelectTrigger>
