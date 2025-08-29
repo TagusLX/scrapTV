@@ -1089,28 +1089,185 @@ async def get_region_stats():
 
 @api_router.get("/export/php")
 async def export_php_format():
-    """Export data in PHP array format with price per m² as main values"""
+    """Export data in PHP array format with clean formatted names"""
     stats = await get_region_stats()
     
     php_array = {}
     for stat in stats:
-        region = stat.region
-        if region not in php_array:
-            php_array[region] = {
-                'average': stat.avg_sale_price_per_sqm or 0,  # €/m² for sales
-                'average_rent': stat.avg_rent_price_per_sqm or 0  # €/m² for rentals
+        if not stat.display_info:
+            continue
+            
+        distrito = stat.display_info['distrito']
+        concelho = stat.display_info['concelho'] 
+        freguesia = stat.display_info['freguesia']
+        
+        # Create distrito level if not exists
+        if distrito not in php_array:
+            php_array[distrito] = {
+                'average': 0,  # Will be calculated as average of all freguesias
+                'average_rent': 0,
+                'freguesias': {}
             }
         
-        # Add location data with price per m²
-        if stat.location != region:
-            location_key = stat.location.replace('-', '_')
-            php_array[region][location_key] = {
-                'name': stat.location.title(),
+        # Create concelho level within distrito
+        if concelho not in php_array[distrito]['freguesias']:
+            php_array[distrito]['freguesias'][concelho] = {
+                'name': concelho,
+                'average': 0,  # Will be calculated as average of freguesias
+                'average_rent': 0,
+                'freguesias': {}
+            }
+        
+        # Add freguesia level data
+        if freguesia:
+            php_array[distrito]['freguesias'][concelho]['freguesias'][freguesia] = {
+                'name': freguesia,
                 'average': stat.avg_sale_price_per_sqm or 0,  # €/m² for sales
                 'average_rent': stat.avg_rent_price_per_sqm or 0  # €/m² for rentals
             }
     
+    # Calculate averages for concelhos and distritos
+    for distrito_name, distrito_data in php_array.items():
+        distrito_sales = []
+        distrito_rents = []
+        
+        for concelho_name, concelho_data in distrito_data['freguesias'].items():
+            concelho_sales = []
+            concelho_rents = []
+            
+            # Get all freguesia prices for this concelho
+            for freguesia_name, freguesia_data in concelho_data['freguesias'].items():
+                if freguesia_data['average'] > 0:
+                    concelho_sales.append(freguesia_data['average'])
+                if freguesia_data['average_rent'] > 0:
+                    concelho_rents.append(freguesia_data['average_rent'])
+            
+            # Calculate concelho averages
+            concelho_data['average'] = sum(concelho_sales) / len(concelho_sales) if concelho_sales else 0
+            concelho_data['average_rent'] = sum(concelho_rents) / len(concelho_rents) if concelho_rents else 0
+            
+            # Add to distrito calculations
+            if concelho_data['average'] > 0:
+                distrito_sales.append(concelho_data['average'])
+            if concelho_data['average_rent'] > 0:
+                distrito_rents.append(concelho_data['average_rent'])
+        
+        # Calculate distrito averages
+        distrito_data['average'] = sum(distrito_sales) / len(distrito_sales) if distrito_sales else 0
+        distrito_data['average_rent'] = sum(distrito_rents) / len(distrito_rents) if distrito_rents else 0
+    
     return {"php_array": php_array}
+
+@api_router.get("/properties/filter")
+async def get_properties_filtered(
+    distrito: Optional[str] = None,
+    concelho: Optional[str] = None,
+    freguesia: Optional[str] = None,
+    operation_type: Optional[str] = None,
+    limit: int = 100
+):
+    """Get properties filtered by administrative levels"""
+    filter_query = {}
+    
+    if distrito:
+        filter_query["region"] = distrito.lower().replace(' ', '-')
+    
+    if operation_type:
+        filter_query["operation_type"] = operation_type
+    
+    # Handle concelho and freguesia filtering
+    if concelho or freguesia:
+        location_patterns = []
+        
+        if concelho and freguesia:
+            # Specific freguesia in specific concelho
+            location_pattern = f"{concelho.lower().replace(' ', '-')}_{freguesia.lower().replace(' ', '-')}"
+            location_patterns.append(location_pattern)
+        elif concelho:
+            # All freguesias in this concelho
+            filter_query["location"] = {"$regex": f"^{concelho.lower().replace(' ', '-')}_"}
+        
+        if location_patterns:
+            filter_query["location"] = {"$in": location_patterns}
+    
+    properties = await db.properties.find(filter_query).sort("scraped_at", -1).limit(limit).to_list(limit)
+    
+    # Add display formatting to each property
+    formatted_properties = []
+    for prop in properties:
+        display_info = format_administrative_display(prop['region'], prop['location'])
+        prop['display_info'] = display_info
+        formatted_properties.append(Property(**prop))
+    
+    return formatted_properties
+
+@api_router.get("/stats/filter")
+async def get_stats_filtered(
+    distrito: Optional[str] = None,
+    concelho: Optional[str] = None,
+    freguesia: Optional[str] = None
+):
+    """Get statistics filtered by administrative levels"""
+    
+    # Build aggregation pipeline based on filters
+    match_conditions = {}
+    
+    if distrito:
+        match_conditions["region"] = distrito.lower().replace(' ', '-')
+    
+    if concelho or freguesia:
+        if concelho and freguesia:
+            # Specific freguesia in specific concelho
+            location_pattern = f"{concelho.lower().replace(' ', '-')}_{freguesia.lower().replace(' ', '-')}"
+            match_conditions["location"] = location_pattern
+        elif concelho:
+            # All freguesias in this concelho
+            match_conditions["location"] = {"$regex": f"^{concelho.lower().replace(' ', '-')}_"}
+    
+    pipeline = [
+        {"$match": match_conditions},
+        {
+            "$group": {
+                "_id": {"region": "$region", "location": "$location", "operation_type": "$operation_type"},
+                "avg_price": {"$avg": "$price"},
+                "avg_price_per_sqm": {"$avg": "$price_per_sqm"},
+                "count": {"$sum": 1}
+            }
+        }
+    ]
+    
+    results = await db.properties.aggregate(pipeline).to_list(1000)
+    
+    # Process results into RegionStats format
+    stats_dict = {}
+    for result in results:
+        key = f"{result['_id']['region']}-{result['_id']['location']}"
+        if key not in stats_dict:
+            # Add display formatting
+            display_info = format_administrative_display(result['_id']['region'], result['_id']['location'])
+            
+            stats_dict[key] = {
+                'region': result['_id']['region'],
+                'location': result['_id']['location'],
+                'total_properties': 0,
+                'avg_sale_price_per_sqm': None,
+                'avg_rent_price_per_sqm': None,
+                'avg_sale_price': None,
+                'avg_rent_price': None,
+                'display_info': display_info
+            }
+        
+        op_type = result['_id']['operation_type']
+        stats_dict[key]['total_properties'] += result['count']
+        
+        if op_type == 'sale':
+            stats_dict[key]['avg_sale_price_per_sqm'] = result['avg_price_per_sqm']
+            stats_dict[key]['avg_sale_price'] = result['avg_price']
+        else:
+            stats_dict[key]['avg_rent_price_per_sqm'] = result['avg_price_per_sqm'] 
+            stats_dict[key]['avg_rent_price'] = result['avg_price']
+    
+    return [RegionStats(**stats) for stats in stats_dict.values()]
 
 @api_router.get("/coverage/stats", response_model=CompleteCoverageReport)
 async def get_coverage_stats():
