@@ -8,7 +8,8 @@ import { Badge } from "./components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Input } from "./components/ui/input";
 import { Label } from "./components/ui/label";
-import { AlertCircle, Database, TrendingUp, MapPin, Play, Loader2, Download, Camera, Send, Eye, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
+import { AlertCircle, Database, TrendingUp, MapPin, Play, Loader2, Download, Camera, Send, Eye, X, Filter } from "lucide-react";
 import { Alert, AlertDescription } from "./components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./components/ui/dialog";
 
