@@ -342,19 +342,43 @@ function tagus_value_get_market_data() {
   const generateIdealistaURL = (region, location, operationType) => {
     if (!region || !location) return null;
     
-    const opPath = operationType === 'sale' ? 'venda' : 'arrendamento';
-    const distrito = region.toLowerCase().replace(' ', '-');
-    
     // Parse location (formato: concelho_freguesia)
-    if (location.includes('_')) {
-      const [concelho, freguesia] = location.split('_', 2);
-      const cleanConcelho = concelho.toLowerCase().replace(' ', '-');
-      const cleanFreguesia = freguesia.toLowerCase().replace(' ', '-').replace(' ', '-');
-      return `https://www.idealista.pt/media/relatorios-preco-habitacao/${opPath}/${distrito}/${cleanConcelho}/${cleanFreguesia}/`;
+    if (!location.includes('_')) return null;
+    
+    const [concelho, freguesia] = location.split('_', 2);
+    const cleanConcelho = concelho.toLowerCase().replace(/\s+/g, '-');
+    const cleanFreguesia = freguesia.toLowerCase().replace(/\s+/g, '-');
+    
+    if (operationType === 'sale') {
+      // URL pour la vente générale (casas + appartements + maisons)
+      return `https://www.idealista.pt/comprar-casas/${cleanConcelho}/${cleanFreguesia}/`;
     } else {
-      const cleanLocation = location.toLowerCase().replace(' ', '-');
-      return `https://www.idealista.pt/media/relatorios-preco-habitacao/${opPath}/${distrito}/${cleanLocation}/`;
+      // URL pour la location générale (arrendamento longa duracao)
+      return `https://www.idealista.pt/arrendar-casas/${cleanConcelho}/${cleanFreguesia}/com-arrendamento-longa-duracao/`;
     }
+  };
+
+  const generatePropertyTypeURLs = (region, location) => {
+    if (!region || !location || !location.includes('_')) return {};
+    
+    const [concelho, freguesia] = location.split('_', 2);
+    const cleanConcelho = concelho.toLowerCase().replace(/\s+/g, '-');
+    const cleanFreguesia = freguesia.toLowerCase().replace(/\s+/g, '-');
+    
+    return {
+      sale: {
+        general: `https://www.idealista.pt/comprar-casas/${cleanConcelho}/${cleanFreguesia}/`,
+        apartments: `https://www.idealista.pt/comprar-casas/${cleanConcelho}/${cleanFreguesia}/com-apartamentos/`,
+        houses: `https://www.idealista.pt/comprar-casas/${cleanConcelho}/${cleanFreguesia}/com-moradias/`,
+        urbanLand: `https://www.idealista.pt/comprar-terrenos/${cleanConcelho}/${cleanFreguesia}/com-terreno-urbano/`,
+        ruralLand: `https://www.idealista.pt/comprar-terrenos/${cleanConcelho}/${cleanFreguesia}/com-terreno-nao-urbanizavel/`
+      },
+      rent: {
+        general: `https://www.idealista.pt/arrendar-casas/${cleanConcelho}/${cleanFreguesia}/com-arrendamento-longa-duracao/`,
+        apartments: `https://www.idealista.pt/arrendar-casas/${cleanConcelho}/${cleanFreguesia}/com-apartamentos,arrendamento-longa-duracao/`,
+        houses: `https://www.idealista.pt/arrendar-casas/${cleanConcelho}/${cleanFreguesia}/com-moradias,arrendamento-longa-duracao/`
+      }
+    };
   };
 
   // Effect to fetch data when filters change
