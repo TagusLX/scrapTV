@@ -743,18 +743,49 @@ function tagus_value_get_market_data() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {regionStats.slice(0, 6).map((stat, index) => (
-                      <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                        <h4 className="font-semibold text-gray-900">
-                          {stat.display_info ? stat.display_info.full_display : `${stat.region} - ${stat.location}`}
-                        </h4>
-                        <div className="space-y-1 text-sm">
-                          <p>Vente: {stat.avg_sale_price_per_sqm ? `${stat.avg_sale_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</p>
-                          <p>Location: {stat.avg_rent_price_per_sqm ? `${stat.avg_rent_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</p>
-                          <p>Zones Prix: {stat.total_properties}</p>
+                    {regionStats.slice(0, 6).map((stat, index) => {
+                      const saleURL = generateIdealistaURL(stat.region, stat.location, 'sale');
+                      const rentURL = generateIdealistaURL(stat.region, stat.location, 'rent');
+                      
+                      return (
+                        <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-3">
+                            {stat.display_info ? stat.display_info.full_display : `${stat.region} - ${stat.location}`}
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center justify-between">
+                              <span>Vente: {stat.avg_sale_price_per_sqm ? `${stat.avg_sale_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</span>
+                              {saleURL && (
+                                <a 
+                                  href={saleURL} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
+                                  title="Voir sur Idealista.pt"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Location: {stat.avg_rent_price_per_sqm ? `${stat.avg_rent_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}</span>
+                              {rentURL && (
+                                <a 
+                                  href={rentURL} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
+                                  title="Voir sur Idealista.pt"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
+                            <p className="pt-1 border-t border-blue-200">Zones Prix: {stat.total_properties}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
