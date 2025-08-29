@@ -89,7 +89,21 @@ const Dashboard = () => {
 
   const fetchProperties = async () => {
     try {
-      const response = await axios.get(`${API}/properties?limit=50`);
+      // Build query parameters based on current filters
+      const params = new URLSearchParams();
+      params.append('limit', '50');
+      
+      if (selectedDistrito) {
+        params.append('distrito', selectedDistrito);
+      }
+      if (selectedConcelho) {
+        params.append('concelho', selectedConcelho);
+      }
+      if (selectedFreguesia) {
+        params.append('freguesia', selectedFreguesia);
+      }
+      
+      const response = await axios.get(`${API}/properties/filter?${params.toString()}`);
       setProperties(response.data);
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -98,7 +112,21 @@ const Dashboard = () => {
 
   const fetchRegionStats = async () => {
     try {
-      const response = await axios.get(`${API}/stats/regions`);
+      // Build query parameters based on current filters
+      const params = new URLSearchParams();
+      
+      if (selectedDistrito) {
+        params.append('distrito', selectedDistrito);
+      }
+      if (selectedConcelho) {
+        params.append('concelho', selectedConcelho);
+      }
+      if (selectedFreguesia) {
+        params.append('freguesia', selectedFreguesia);
+      }
+      
+      const endpoint = params.toString() ? `${API}/stats/filter?${params.toString()}` : `${API}/stats/regions`;
+      const response = await axios.get(endpoint);
       setRegionStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
