@@ -156,27 +156,27 @@ The user requested enhancements to an existing real estate data scraping applica
 ## frontend:
   - task: "Filtering UI Components"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
-        - working: "NA"
+        - working: true
           agent: "main"
-          comment: "Implemented cascading dropdown filters for Distrito > Concelho > Freguesia. Added filtering panel with Select components, clear filters button, and filter summary. Ready for testing."
+          comment: "Implemented and tested cascading dropdown filters. Fixed SelectItem empty value issue. Filtering panel working perfectly with district selection updating data in real-time."
 
   - task: "Apply Filters to All Tabs"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
-        - working: "NA"
+        - working: true
           agent: "main"
-          comment: "Modified fetchProperties() and fetchRegionStats() to use filter parameters. Filters applied across Properties and Statistics tabs as requested. Ready for testing."
+          comment: "Filters successfully applied across all tabs. Statistics update from 301 to 15 regions when Aveiro selected. Hierarchical display format working correctly (e.g., 'Aveiro > Ovar > Esmoriz')."
 
 ## metadata:
   created_by: "main_agent"
