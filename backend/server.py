@@ -555,19 +555,35 @@ class IdealistaScraper:
             return False
     
     async def scrape_freguesia(self, distrito, concelho, freguesia, operation_type='sale', session_id=None):
-        """Scrape average price per m² from idealista.pt freguesia reports"""
+        """Scrape average price per m² from idealista.pt freguesia property listings"""
         properties = []
         
-        # Construct URLs for idealista.pt administrative reports
+        # Construct URLs for idealista.pt property search pages
+        concelho_clean = concelho.lower().replace(' ', '-').replace('_', '-')
+        freguesia_clean = freguesia.lower().replace(' ', '-').replace('_', '-')
+        
         if operation_type == 'sale':
-            op_path = 'venda'
+            # URL for general sales (casas + apartments + houses)
+            base_url = f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/"
+            # Additional URLs for specific property types
+            urls_to_scrape = [
+                base_url,  # General
+                f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos/",
+                f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-moradias/",
+                f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-urbano/",
+                f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-nao-urbanizavel/"
+            ]
         else:
-            op_path = 'arrendamento'
-            
-        # Base URL for reports
-        base_url = f"https://www.idealista.pt/media/relatorios-preco-habitacao/{op_path}/{distrito}/{concelho}/{freguesia}/"
+            # URL for rentals (arrendamento longa duracao)
+            base_url = f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-arrendamento-longa-duracao/"
+            urls_to_scrape = [
+                base_url,  # General
+                f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos,arrendamento-longa-duracao/",
+                f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-moradias,arrendamento-longa-duracao/"
+            ]
         
         logger.info(f"Scraping administrative unit: {distrito}/{concelho}/{freguesia} ({operation_type})")
+        logger.info(f"Primary URL: {base_url}")
         
         try:
             # Simulate scraping delay (realistic timing)
@@ -620,21 +636,30 @@ class IdealistaScraper:
                                 }}
                             )
                     
-                    # Look for price information in the report page
+                    # Look for price information in the property listings
                     try:
-                        # Try to find price elements from reports
+                        # Try to find price elements from property listings
                         price_elements = self.driver.find_elements(By.XPATH, 
-                            "//*[contains(text(), 'Preço médio') or contains(text(), 'preço médio') or contains(text(), '€/m²')]")
+                            "//*[contains(@class, 'item-price') or contains(@class, 'price') or contains(text(), '€/m²')]")
                         
+                        prices_found = []
                         for elem in price_elements:
                             text = elem.get_attribute('textContent') or elem.text
-                            price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€?/?m²?', text.lower())
+                            price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€?/?m²?', text.replace('.', '').replace(',', '.'))
                             if price_match:
                                 price_str = price_match.group(1).replace(',', '.')
-                                average_price_per_sqm = float(price_str)
-                                real_data_found = True
-                                logger.info(f"Found real average price: {average_price_per_sqm} €/m²")
-                                break
+                                try:
+                                    price = float(price_str)
+                                    if 100 <= price <= 50000:  # Reasonable price range for €/m²
+                                        prices_found.append(price)
+                                except:
+                                    continue
+                        
+                        if prices_found:
+                            average_price_per_sqm = sum(prices_found) / len(prices_found)
+                            real_data_found = True
+                            logger.info(f"Found real average price from {len(prices_found)} listings: {average_price_per_sqm:.2f} €/m²")
+                            
                     except Exception as e:
                         logger.warning(f"Could not extract real average price: {e}")
                         
@@ -654,14 +679,27 @@ class IdealistaScraper:
                     if response.status_code == 200:
                         # Look for price information in the HTML
                         soup = BeautifulSoup(response.content, 'html.parser')
-                        page_text = soup.get_text()
                         
-                        price_match = re.search(r'preço médio.*?(\d+(?:[.,]\d+)?)\s*€?/?m²?', page_text.lower())
-                        if price_match:
-                            price_str = price_match.group(1).replace(',', '.')
-                            average_price_per_sqm = float(price_str)
+                        # Look for price elements in property listings
+                        price_elements = soup.find_all(['span', 'div'], class_=re.compile(r'price|valor'))
+                        prices_found = []
+                        
+                        for elem in price_elements:
+                            text = elem.get_text()
+                            price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€/?m²?', text.replace('.', '').replace(',', '.'))
+                            if price_match:
+                                price_str = price_match.group(1).replace(',', '.')
+                                try:
+                                    price = float(price_str)
+                                    if 100 <= price <= 50000:  # Reasonable price range
+                                        prices_found.append(price)
+                                except:
+                                    continue
+                        
+                        if prices_found:
+                            average_price_per_sqm = sum(prices_found) / len(prices_found)
                             real_data_found = True
-                            logger.info(f"Found real average price via requests: {average_price_per_sqm} €/m²")
+                            logger.info(f"Found real average price via requests from {len(prices_found)} listings: {average_price_per_sqm:.2f} €/m²")
                 except Exception as e:
                     logger.warning(f"Requests scraping failed: {e}")
             
