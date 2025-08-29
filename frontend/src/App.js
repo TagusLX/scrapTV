@@ -594,8 +594,8 @@ function tagus_value_get_market_data() {
                             {property.operation_type === 'sale' ? 'Vente' : 'Location'}
                           </Badge>
                         </div>
-                        <h4 className="font-medium capitalize">
-                          {property.region} - {property.location}
+                        <h4 className="font-medium">
+                          {property.display_info ? property.display_info.full_display : `${property.region} - ${property.location}`}
                         </h4>
                         <div className="space-y-1 text-sm text-gray-600">
                           {property.price && (
