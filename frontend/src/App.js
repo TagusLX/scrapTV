@@ -626,8 +626,8 @@ function tagus_value_get_market_data() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {regionStats.map((stat, index) => (
                     <div key={index} className="p-6 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
-                      <h4 className="font-bold text-lg capitalize mb-4">
-                        {stat.region} - {stat.location}
+                      <h4 className="font-bold text-lg mb-4">
+                        {stat.display_info ? stat.display_info.full_display : `${stat.region} - ${stat.location}`}
                       </h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
