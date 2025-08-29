@@ -103,6 +103,14 @@ class RegionStats(BaseModel):
     # Keep other stats for detailed analytics
     avg_sale_price: Optional[float] = None
     avg_rent_price: Optional[float] = None
+    # Add display formatting
+    display_info: Optional[dict] = None
+
+@api_router.delete("/properties")
+async def clear_all_properties():
+    """Clear all scraped properties"""
+    result = await db.properties.delete_many({})
+    return {"message": f"Deleted {result.deleted_count} properties"}
 
 class CoverageStats(BaseModel):
     distrito: str
