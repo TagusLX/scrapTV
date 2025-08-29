@@ -149,6 +149,9 @@ The user requested enhancements to an existing real estate data scraping applica
         - working: true
           agent: "main"
           comment: "Backend has filtering endpoints: `/api/properties/filter` and `/api/stats/filter` that accept distrito, concelho, freguesia parameters. Ready for frontend integration."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Both filtering endpoints working perfectly. GET /api/properties/filter supports distrito, concelho, freguesia, operation_type, and limit parameters. Tested with no filters (100 properties), distrito filter (30 properties), distrito+operation (15 properties), distrito+concelho (6 properties). GET /api/stats/filter supports same parameters. Tested with no filters (112 stats), distrito filter (15 stats), distrito+concelho (3 stats). All responses include proper display_info with full_display hierarchical format (e.g., 'Aveiro > Agueda > Águeda e Borralha')."
 
 ## frontend:
   - task: "Filtering UI Components"
