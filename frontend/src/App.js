@@ -27,6 +27,12 @@ const Dashboard = () => {
   const [showCaptchaDialog, setShowCaptchaDialog] = useState(false);
   const [solvingCaptcha, setSolvingCaptcha] = useState(false);
   const [coverageStats, setCoverageStats] = useState(null);
+  const [districts, setDistricts] = useState([]);
+  const [concelhos, setConcelhos] = useState([]);
+  const [freguesias, setFreguesias] = useState([]);
+  const [selectedDistrito, setSelectedDistrito] = useState("");
+  const [selectedConcelho, setSelectedConcelho] = useState("");
+  const [selectedFreguesia, setSelectedFreguesia] = useState("");
 
   const fetchScrapingSessions = async () => {
     try {
