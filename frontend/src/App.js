@@ -285,29 +285,32 @@ function tagus_value_get_market_data() {
   };
 
   const handleDistritoChange = (distrito) => {
-    setSelectedDistrito(distrito);
+    const selectedValue = distrito === "all" ? "" : distrito;
+    setSelectedDistrito(selectedValue);
     setSelectedConcelho("");
     setSelectedFreguesia("");
     setConcelhos([]);
     setFreguesias([]);
     
-    if (distrito) {
-      fetchConcelhos(distrito);
+    if (selectedValue) {
+      fetchConcelhos(selectedValue);
     }
   };
 
   const handleConcelhoChange = (concelho) => {
-    setSelectedConcelho(concelho);
+    const selectedValue = concelho === "all" ? "" : concelho;
+    setSelectedConcelho(selectedValue);
     setSelectedFreguesia("");
     setFreguesias([]);
     
-    if (concelho && selectedDistrito) {
-      fetchFreguesias(selectedDistrito, concelho);
+    if (selectedValue && selectedDistrito) {
+      fetchFreguesias(selectedDistrito, selectedValue);
     }
   };
 
   const handleFrequesiaChange = (freguesia) => {
-    setSelectedFreguesia(freguesia);
+    const selectedValue = freguesia === "all" ? "" : freguesia;
+    setSelectedFreguesia(selectedValue);
   };
 
   const applyFilters = () => {
