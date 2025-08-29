@@ -1061,6 +1061,9 @@ async def get_region_stats():
     for result in results:
         key = f"{result['_id']['region']}-{result['_id']['location']}"
         if key not in stats_dict:
+            # Add display formatting
+            display_info = format_administrative_display(result['_id']['region'], result['_id']['location'])
+            
             stats_dict[key] = {
                 'region': result['_id']['region'],
                 'location': result['_id']['location'],
@@ -1068,7 +1071,8 @@ async def get_region_stats():
                 'avg_sale_price_per_sqm': None,  # Primary metric for sales
                 'avg_rent_price_per_sqm': None,  # Primary metric for rentals
                 'avg_sale_price': None,  # Keep for detailed stats
-                'avg_rent_price': None   # Keep for detailed stats
+                'avg_rent_price': None,   # Keep for detailed stats
+                'display_info': display_info
             }
         
         op_type = result['_id']['operation_type']
