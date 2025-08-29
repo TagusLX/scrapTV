@@ -561,6 +561,112 @@ function tagus_value_get_market_data() {
           </CardContent>
         </Card>
 
+        {/* Filtering Panel */}
+        <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-green-600" />
+              Filtrer par Région Administrative
+            </CardTitle>
+            <CardDescription>
+              Filtrer les données par Distrito, Concelho et Freguesia
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Distrito Filter */}
+              <div className="space-y-2">
+                <Label>Distrito</Label>
+                <Select value={selectedDistrito} onValueChange={handleDistritoChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un distrito" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les distritos</SelectItem>
+                    {districts.map((distrito) => (
+                      <SelectItem key={distrito.id} value={distrito.id}>
+                        {distrito.name_display}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Concelho Filter */}
+              <div className="space-y-2">
+                <Label>Concelho</Label>
+                <Select 
+                  value={selectedConcelho} 
+                  onValueChange={handleConcelhoChange}
+                  disabled={!selectedDistrito}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un concelho" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les concelhos</SelectItem>
+                    {concelhos.map((concelho) => (
+                      <SelectItem key={concelho.id} value={concelho.id}>
+                        {concelho.name_display}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Freguesia Filter */}
+              <div className="space-y-2">
+                <Label>Freguesia</Label>
+                <Select 
+                  value={selectedFreguesia} 
+                  onValueChange={handleFrequesiaChange}
+                  disabled={!selectedConcelho}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner une freguesia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Toutes les freguesias</SelectItem>
+                    {freguesias.map((freguesia) => (
+                      <SelectItem key={freguesia.id} value={freguesia.id}>
+                        {freguesia.name_display}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Clear Filters Button */}
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <Button 
+                  onClick={clearFilters} 
+                  variant="outline" 
+                  className="w-full"
+                  disabled={!selectedDistrito && !selectedConcelho && !selectedFreguesia}
+                >
+                  Effacer Filtres
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Summary */}
+            {(selectedDistrito || selectedConcelho || selectedFreguesia) && (
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Filtre actif:</strong> {
+                    [
+                      selectedDistrito && districts.find(d => d.id === selectedDistrito)?.name_display,
+                      selectedConcelho && concelhos.find(c => c.id === selectedConcelho)?.name_display,
+                      selectedFreguesia && freguesias.find(f => f.id === selectedFreguesia)?.name_display
+                    ].filter(Boolean).join(' > ')
+                  }
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Main Content */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 bg-white/50 backdrop-blur-sm">
