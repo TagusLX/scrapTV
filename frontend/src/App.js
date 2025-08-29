@@ -246,7 +246,84 @@ function tagus_value_get_market_data() {
     return result;
   };
 
-  const clearAllData = async () => {
+  const fetchDistricts = async () => {
+    try {
+      const response = await axios.get(`${API}/administrative/districts`);
+      setDistricts(response.data.districts || []);
+    } catch (error) {
+      console.error('Error fetching districts:', error);
+    }
+  };
+
+  const fetchConcelhos = async (distrito) => {
+    try {
+      if (!distrito) {
+        setConcelhos([]);
+        return;
+      }
+      const response = await axios.get(`${API}/administrative/districts/${distrito}/concelhos`);
+      setConcelhos(response.data.concelhos || []);
+    } catch (error) {
+      console.error('Error fetching concelhos:', error);
+      setConcelhos([]);
+    }
+  };
+
+  const fetchFreguesias = async (distrito, concelho) => {
+    try {
+      if (!distrito || !concelho) {
+        setFreguesias([]);
+        return;
+      }
+      const response = await axios.get(`${API}/administrative/districts/${distrito}/concelhos/${concelho}/freguesias`);
+      setFreguesias(response.data.freguesias || []);
+    } catch (error) {
+      console.error('Error fetching freguesias:', error);
+      setFreguesias([]);
+    }
+  };
+
+  const handleDistritoChange = (distrito) => {
+    setSelectedDistrito(distrito);
+    setSelectedConcelho("");
+    setSelectedFreguesia("");
+    setConcelhos([]);
+    setFreguesias([]);
+    
+    if (distrito) {
+      fetchConcelhos(distrito);
+    }
+  };
+
+  const handleConcelhoChange = (concelho) => {
+    setSelectedConcelho(concelho);
+    setSelectedFreguesia("");
+    setFreguesias([]);
+    
+    if (concelho && selectedDistrito) {
+      fetchFreguesias(selectedDistrito, concelho);
+    }
+  };
+
+  const handleFrequesiaChange = (freguesia) => {
+    setSelectedFreguesia(freguesia);
+  };
+
+  const applyFilters = () => {
+    fetchProperties();
+    fetchRegionStats();
+  };
+
+  const clearFilters = () => {
+    setSelectedDistrito("");
+    setSelectedConcelho("");
+    setSelectedFreguesia("");
+    setConcelhos([]);
+    setFreguesias([]);
+    // Fetch unfiltered data
+    fetchProperties();
+    fetchRegionStats();
+  };
     try {
       await axios.delete(`${API}/properties`);
       setProperties([]);
