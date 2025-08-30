@@ -114,6 +114,35 @@ const Dashboard = () => {
     }
   };
 
+  const fetchDetailedStats = async () => {
+    try {
+      // Build query parameters based on current filters
+      const params = new URLSearchParams();
+      
+      if (selectedDistrito) {
+        params.append('distrito', selectedDistrito);
+      }
+      if (selectedConcelho) {
+        params.append('concelho', selectedConcelho);
+      }
+      if (selectedFreguesia) {
+        params.append('freguesia', selectedFreguesia);
+      }
+      if (selectedOperationType) {
+        params.append('operation_type', selectedOperationType);
+      }
+      if (selectedPropertyType) {
+        params.append('property_type', selectedPropertyType);
+      }
+      
+      const endpoint = `${API}/stats/detailed?${params.toString()}`;
+      const response = await axios.get(endpoint);
+      setDetailedStats(response.data);
+    } catch (error) {
+      console.error('Error fetching detailed stats:', error);
+    }
+  };
+
   const fetchRegionStats = async () => {
     try {
       // Build query parameters based on current filters
