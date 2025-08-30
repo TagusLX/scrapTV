@@ -888,7 +888,266 @@ class IdealistaScraper:
 
 scraper = IdealistaScraper()
 
-@api_router.post("/scrape/start")
+@api_router.post("/scrape/targeted")
+async def start_targeted_scraping(
+    background_tasks: BackgroundTasks,
+    distrito: Optional[str] = None,
+    concelho: Optional[str] = None, 
+    freguesia: Optional[str] = None
+):
+    """Start a targeted scraping session for specific administrative level"""
+    if not distrito:
+        raise HTTPException(status_code=400, detail="Distrito is required")
+    
+    session = ScrapingSession(status="running")
+    session_dict = session.dict()
+    await db.scraping_sessions.insert_one(session_dict)
+    
+    background_tasks.add_task(run_targeted_scraping_task, session.id, distrito, concelho, freguesia)
+    
+    target_description = distrito
+    if concelho:
+        target_description += f" > {concelho}"
+    if freguesia:
+        target_description += f" > {freguesia}"
+    
+    return {
+        "message": f"Scraping ciblé démarré pour: {target_description}", 
+        "session_id": session.id,
+        "target": {"distrito": distrito, "concelho": concelho, "freguesia": freguesia}
+    }
+
+async def run_targeted_scraping_task(session_id: str, distrito: str, concelho: Optional[str] = None, freguesia: Optional[str] = None):
+    """Background task for targeted scraping"""
+    try:
+        # Update session status
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {"status": "running"}}
+        )
+        
+        total_properties = 0
+        regions_scraped = []
+        
+        # Initialize scraper with session ID
+        scraper.session_id = session_id
+        
+        # Get the administrative structure
+        logger.info("Fetching administrative structure for targeted scraping...")
+        structure = await scraper.get_administrative_structure()
+        
+        if not structure or distrito not in structure:
+            await db.scraping_sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "status": "failed",
+                    "completed_at": datetime.now(timezone.utc),
+                    "error_message": f"Distrito '{distrito}' not found in administrative structure"
+                }}
+            )
+            return
+        
+        distrito_data = structure[distrito]
+        
+        if freguesia and concelho:
+            # Scrape specific freguesia
+            if concelho in distrito_data and freguesia in distrito_data[concelho]:
+                logger.info(f"Scraping specific freguesia: {distrito}/{concelho}/{freguesia}")
+                
+                # Scrape sales data
+                sale_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'sale', session_id=session_id)
+                for prop_data in sale_properties:
+                    property_obj = Property(**prop_data)
+                    await db.properties.insert_one(property_obj.dict())
+                    total_properties += 1
+                
+                # Scrape rental data
+                rent_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'rent', session_id=session_id)
+                for prop_data in rent_properties:
+                    property_obj = Property(**prop_data)
+                    await db.properties.insert_one(property_obj.dict())
+                    total_properties += 1
+                
+                regions_scraped.append(f"{distrito}/{concelho}/{freguesia}")
+            else:
+                raise Exception(f"Freguesia '{freguesia}' not found in {distrito}/{concelho}")
+                
+        elif concelho:
+            # Scrape all freguesias in concelho
+            if concelho in distrito_data:
+                logger.info(f"Scraping all freguesias in concelho: {distrito}/{concelho}")
+                freguesias_list = distrito_data[concelho]
+                
+                for freguesia_name in freguesias_list:
+                    try:
+                        logger.info(f"Processing: {distrito}/{concelho}/{freguesia_name}")
+                        
+                        # Scrape sales and rental data for this freguesia
+                        sale_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia_name, 'sale', session_id=session_id)
+                        for prop_data in sale_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+                        
+                        rent_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia_name, 'rent', session_id=session_id)
+                        for prop_data in rent_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+                        
+                        regions_scraped.append(f"{distrito}/{concelho}/{freguesia_name}")
+                        
+                        # Small delay between freguesias
+                        await asyncio.sleep(1)
+                        
+                    except Exception as e:
+                        logger.error(f"Error scraping freguesia {freguesia_name}: {e}")
+                        continue
+            else:
+                raise Exception(f"Concelho '{concelho}' not found in distrito '{distrito}'")
+                
+        else:
+            # Scrape all concelhos and freguesias in distrito
+            logger.info(f"Scraping all concelhos in distrito: {distrito}")
+            
+            for concelho_name, freguesias_list in distrito_data.items():
+                logger.info(f"Processing concelho: {distrito}/{concelho_name} ({len(freguesias_list)} freguesias)")
+                
+                for freguesia_name in freguesias_list:
+                    try:
+                        logger.info(f"Processing: {distrito}/{concelho_name}/{freguesia_name}")
+                        
+                        # Scrape sales and rental data
+                        sale_properties = await scraper.scrape_freguesia(distrito, concelho_name, freguesia_name, 'sale', session_id=session_id)
+                        for prop_data in sale_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+                        
+                        rent_properties = await scraper.scrape_freguesia(distrito, concelho_name, freguesia_name, 'rent', session_id=session_id)
+                        for prop_data in rent_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+                        
+                        regions_scraped.append(f"{distrito}/{concelho_name}/{freguesia_name}")
+                        
+                        # Small delay between freguesias
+                        await asyncio.sleep(1)
+                        
+                    except Exception as e:
+                        logger.error(f"Error scraping freguesia {freguesia_name}: {e}")
+                        continue
+                
+                # Delay between concelhos
+                await asyncio.sleep(2)
+        
+        # Clean up driver
+        scraper.close_driver()
+        
+        # Update session as completed
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc),
+                "total_properties": total_properties,
+                "regions_scraped": regions_scraped
+            }}
+        )
+        
+        logger.info(f"Targeted scraping completed: {total_properties} properties from {len(regions_scraped)} regions")
+        
+    except Exception as e:
+        logger.error(f"Targeted scraping failed: {e}")
+        scraper.close_driver()
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc),
+                "error_message": str(e)
+            }}
+        )
+
+@api_router.get("/coverage/detailed")
+async def get_detailed_coverage():
+    """Get detailed coverage statistics by administrative levels"""
+    
+    # Get administrative structure
+    if not scraper.administrative_structure:
+        await scraper.get_administrative_structure()
+    
+    structure = scraper.administrative_structure
+    
+    # Get all scraped locations from database
+    scraped_locations = await db.properties.distinct("location")
+    scraped_regions = await db.properties.distinct("region")
+    
+    detailed_coverage = {
+        "overview": {
+            "total_distritos": len(structure),
+            "scraped_distritos": len(scraped_regions),
+            "total_concelhos": sum(len(concelhos) for concelhos in structure.values()),
+            "total_freguesias": sum(len(freguesias) for distrito_data in structure.values() for freguesias in distrito_data.values()),
+            "scraped_locations": len(scraped_locations)
+        },
+        "by_distrito": []
+    }
+    
+    for distrito, concelhos_data in structure.items():
+        distrito_info = {
+            "distrito": distrito,
+            "distrito_display": distrito.replace('-', ' ').title(),
+            "total_concelhos": len(concelhos_data),
+            "total_freguesias": sum(len(freguesias) for freguesias in concelhos_data.values()),
+            "scraped": distrito in scraped_regions,
+            "concelhos": []
+        }
+        
+        scraped_concelhos = 0
+        scraped_freguesias_total = 0
+        
+        for concelho, freguesias_list in concelhos_data.items():
+            # Check which freguesias in this concelho are scraped
+            scraped_freguesias_in_concelho = []
+            for freguesia in freguesias_list:
+                location_pattern = f"{concelho}_{freguesia}"
+                if location_pattern in scraped_locations:
+                    scraped_freguesias_in_concelho.append(freguesia)
+            
+            concelho_scraped = len(scraped_freguesias_in_concelho) > 0
+            if concelho_scraped:
+                scraped_concelhos += 1
+            
+            scraped_freguesias_total += len(scraped_freguesias_in_concelho)
+            
+            concelho_info = {
+                "concelho": concelho,
+                "concelho_display": concelho.replace('-', ' ').title(),
+                "total_freguesias": len(freguesias_list),
+                "scraped_freguesias": len(scraped_freguesias_in_concelho),
+                "scraped": concelho_scraped,
+                "coverage_percentage": (len(scraped_freguesias_in_concelho) / len(freguesias_list)) * 100 if freguesias_list else 0,
+                "missing_freguesias": [f for f in freguesias_list if f not in [sf for sf in scraped_freguesias_in_concelho]]
+            }
+            
+            distrito_info["concelhos"].append(concelho_info)
+        
+        distrito_info["scraped_concelhos"] = scraped_concelhos
+        distrito_info["scraped_freguesias"] = scraped_freguesias_total
+        distrito_info["concelho_coverage_percentage"] = (scraped_concelhos / len(concelhos_data)) * 100 if concelhos_data else 0
+        distrito_info["freguesia_coverage_percentage"] = (scraped_freguesias_total / distrito_info["total_freguesias"]) * 100 if distrito_info["total_freguesias"] else 0
+        
+        detailed_coverage["by_distrito"].append(distrito_info)
+    
+    # Update overview with calculated values
+    detailed_coverage["overview"]["scraped_concelhos"] = sum(d["scraped_concelhos"] for d in detailed_coverage["by_distrito"])
+    detailed_coverage["overview"]["scraped_freguesias"] = sum(d["scraped_freguesias"] for d in detailed_coverage["by_distrito"])
+    
+    return detailed_coverage
+
+@api_router.get("/scrape/start")
 async def start_scraping(background_tasks: BackgroundTasks):
     """Start a new scraping session"""
     session = ScrapingSession(status="running")
