@@ -1257,6 +1257,96 @@ async def get_properties_filtered(
     
     return formatted_properties
 
+@api_router.get("/stats/detailed")
+async def get_detailed_stats(
+    distrito: Optional[str] = None,
+    concelho: Optional[str] = None,
+    freguesia: Optional[str] = None,
+    operation_type: Optional[str] = None,
+    property_type: Optional[str] = None
+):
+    """Get detailed statistics by property type and operation type"""
+    
+    # Build aggregation pipeline based on filters
+    match_conditions = {}
+    
+    if distrito:
+        match_conditions["region"] = distrito.lower().replace(' ', '-')
+    
+    if concelho or freguesia:
+        if concelho and freguesia:
+            location_pattern = f"{concelho.lower().replace(' ', '-')}_{freguesia.lower().replace(' ', '-')}"
+            match_conditions["location"] = location_pattern
+        elif concelho:
+            match_conditions["location"] = {"$regex": f"^{concelho.lower().replace(' ', '-')}_"}
+    
+    if operation_type:
+        match_conditions["operation_type"] = operation_type
+        
+    if property_type:
+        match_conditions["property_type"] = property_type
+
+    pipeline = [
+        {"$match": match_conditions},
+        {
+            "$group": {
+                "_id": {
+                    "region": "$region", 
+                    "location": "$location", 
+                    "operation_type": "$operation_type",
+                    "property_type": "$property_type"
+                },
+                "avg_price": {"$avg": "$price"},
+                "avg_price_per_sqm": {"$avg": "$price_per_sqm"},
+                "count": {"$sum": 1}
+            }
+        },
+        {"$sort": {"_id.region": 1, "_id.location": 1, "_id.operation_type": 1, "_id.property_type": 1}}
+    ]
+    
+    results = await db.properties.aggregate(pipeline).to_list(1000)
+    
+    # Group results by location
+    location_stats = {}
+    for result in results:
+        key = f"{result['_id']['region']}-{result['_id']['location']}"
+        
+        if key not in location_stats:
+            display_info = format_administrative_display(result['_id']['region'], result['_id']['location'])
+            location_stats[key] = ExtendedRegionStats(
+                region=result['_id']['region'],
+                location=result['_id']['location'],
+                display_info=display_info,
+                detailed_stats=[]
+            )
+        
+        # Add detailed stat
+        detailed_stat = DetailedPropertyStats(
+            property_type=result['_id']['property_type'],
+            operation_type=result['_id']['operation_type'],
+            avg_price_per_sqm=result['avg_price_per_sqm'],
+            avg_price=result['avg_price'],
+            count=result['count']
+        )
+        location_stats[key].detailed_stats.append(detailed_stat)
+        
+        # Update general stats for backward compatibility
+        location_stats[key].total_properties += result['count']
+        
+        if result['_id']['operation_type'] == 'sale' and result['avg_price_per_sqm']:
+            if location_stats[key].avg_sale_price_per_sqm:
+                location_stats[key].avg_sale_price_per_sqm = (location_stats[key].avg_sale_price_per_sqm + result['avg_price_per_sqm']) / 2
+            else:
+                location_stats[key].avg_sale_price_per_sqm = result['avg_price_per_sqm']
+                
+        if result['_id']['operation_type'] == 'rent' and result['avg_price_per_sqm']:
+            if location_stats[key].avg_rent_price_per_sqm:
+                location_stats[key].avg_rent_price_per_sqm = (location_stats[key].avg_rent_price_per_sqm + result['avg_price_per_sqm']) / 2
+            else:
+                location_stats[key].avg_rent_price_per_sqm = result['avg_price_per_sqm']
+    
+    return list(location_stats.values())
+
 @api_router.get("/stats/filter")
 async def get_stats_filtered(
     distrito: Optional[str] = None,
