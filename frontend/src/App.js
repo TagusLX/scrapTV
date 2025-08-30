@@ -34,6 +34,9 @@ const Dashboard = () => {
   const [selectedDistrito, setSelectedDistrito] = useState("");
   const [selectedConcelho, setSelectedConcelho] = useState("");
   const [selectedFreguesia, setSelectedFreguesia] = useState("");
+  const [selectedOperationType, setSelectedOperationType] = useState("");
+  const [selectedPropertyType, setSelectedPropertyType] = useState("");
+  const [detailedStats, setDetailedStats] = useState([]);
 
   const fetchScrapingSessions = async () => {
     try {
