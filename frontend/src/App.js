@@ -776,16 +776,21 @@ function tagus_value_get_market_data() {
             </div>
 
             {/* Filter Summary */}
-            {(selectedDistrito || selectedConcelho || selectedFreguesia) && (
+            {(selectedDistrito || selectedConcelho || selectedFreguesia || selectedOperationType || selectedPropertyType) && (
               <div className="p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Filtre actif:</strong> {
-                    [
-                      selectedDistrito && districts.find(d => d.id === selectedDistrito)?.name_display,
-                      selectedConcelho && concelhos.find(c => c.id === selectedConcelho)?.name_display,
-                      selectedFreguesia && freguesias.find(f => f.id === selectedFreguesia)?.name_display
-                    ].filter(Boolean).join(' > ')
-                  }
+                  <strong>Filtres actifs:</strong> 
+                  {[
+                    selectedDistrito && districts.find(d => d.id === selectedDistrito)?.name_display,
+                    selectedConcelho && concelhos.find(c => c.id === selectedConcelho)?.name_display,
+                    selectedFreguesia && freguesias.find(f => f.id === selectedFreguesia)?.name_display,
+                    selectedOperationType && (selectedOperationType === 'sale' ? 'Vente' : 'Location'),
+                    selectedPropertyType && {
+                      'apartment': 'Appartements',
+                      'house': 'Maisons', 
+                      'plot': 'Terrains'
+                    }[selectedPropertyType]
+                  ].filter(Boolean).join(' • ')}
                 </p>
               </div>
             )}
