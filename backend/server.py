@@ -846,65 +846,23 @@ class IdealistaScraper:
                     except Exception as e:
                         logger.warning(f"Requests scraping failed: {e}")
                 
-                # If real scraping fails, generate realistic simulated data based on Portuguese market and property type
-                if not real_data_found:
-                    logger.info(f"Real scraping blocked for {url}, generating realistic data for {property_type}")
-                    
-                    # Enhanced Portuguese market €/m² prices by distrito and property type
-                    district_base_prices = {
-                        'faro': {'sale': (1800, 4200), 'rent': (10, 25)},
-                        'lisboa': {'sale': (3500, 8500), 'rent': (18, 45)},
-                        'porto': {'sale': (2000, 5500), 'rent': (12, 30)},
-                        'setubal': {'sale': (2200, 4800), 'rent': (14, 28)},
-                        'aveiro': {'sale': (1400, 3200), 'rent': (8, 20)},
-                        'braga': {'sale': (1200, 2800), 'rent': (8, 18)},
-                        'coimbra': {'sale': (1600, 3800), 'rent': (10, 22)},
-                        'leiria': {'sale': (1300, 3000), 'rent': (9, 19)},
-                        'santarem': {'sale': (1100, 2600), 'rent': (7, 16)},
-                        'viseu': {'sale': (1000, 2400), 'rent': (6, 15)},
-                        'castelo-branco': {'sale': (800, 2000), 'rent': (5, 12)},
-                        'guarda': {'sale': (700, 1800), 'rent': (4, 11)},
-                        'braganca': {'sale': (600, 1600), 'rent': (4, 10)},
-                    }
-                    
-                    # Property type multipliers
-                    type_multipliers = {
-                        'apartment': 1.1,   # Apartments typically more expensive per m²
-                        'house': 1.0,       # Base price
-                        'urban_plot': 0.4,  # Urban plots cheaper per m² than built properties
-                        'rural_plot': 0.15  # Rural/agricultural plots much cheaper
-                    }
-                    
-                    # Get district-specific pricing or use default
-                    district_prices = district_base_prices.get(distrito, district_base_prices['aveiro'])
-                    min_price, max_price = district_prices[operation_type]
-                    
-                    # Apply property type multiplier
-                    multiplier = type_multipliers.get(property_type, 1.0)
-                    min_price = int(min_price * multiplier)
-                    max_price = int(max_price * multiplier)
-                    
-                    if max_price > 0:
-                        # Generate realistic variation around the market average
-                        import random
-                        average_price_per_sqm = min_price + (max_price - min_price) * (0.2 + random.random() * 0.6)
-                        average_price_per_sqm = round(average_price_per_sqm, 2)
-                
-                # Create property entry with specific property type
-                if average_price_per_sqm and average_price_per_sqm > 0:
+                # Create property entry ONLY if we have real scraped data
+                if real_data_found and average_price_per_sqm and average_price_per_sqm > 0:
                     property_data = {
                         'region': distrito,
-                        'location': f"{concelho}_{freguesia}",  # Combined for uniqueness
+                        'location': f"{concelho}_{freguesia}",
                         'property_type': property_type,  # Specific property type (apartment, house, urban_plot, rural_plot)
-                        'price': None,  # Individual property prices not available from listings aggregation
-                        'price_per_sqm': average_price_per_sqm,  # This is the key metric from listings
-                        'area': None,  # Not applicable for aggregated averages
+                        'price': None,  # Individual property prices not available from zone averages
+                        'price_per_sqm': average_price_per_sqm,  # REAL scraped price from "Preço médio nesta zona"
+                        'area': None,  # Not applicable for zone averages
                         'operation_type': operation_type,
                         'url': url
                     }
                     
                     all_properties.append(property_data)
-                    logger.info(f"Added {property_type} {operation_type}: {average_price_per_sqm} €/m² for {distrito}/{concelho}/{freguesia}")
+                    logger.info(f"✅ Added REAL SCRAPED {property_type} {operation_type}: {average_price_per_sqm:.2f} €/m² for {distrito}/{concelho}/{freguesia}")
+                else:
+                    logger.warning(f"❌ No real price data found for {property_type} {operation_type} at {distrito}/{concelho}/{freguesia} - SKIPPING (no simulated data)")
                 
                 # Add delay between property types to be respectful
                 await asyncio.sleep(1)
