@@ -216,6 +216,30 @@ The user requested enhancements to an existing real estate data scraping applica
           agent: "testing"
           comment: "✅ TESTED: New detailed statistics endpoint GET /api/stats/detailed working perfectly with all filter combinations. Tested: (1) No filters - returns 301 detailed stats with proper ExtendedRegionStats structure including detailed_stats array, (2) Distrito filter (faro) - returns 49 filtered results, all from Faro district, (3) Operation type filter (sale) - returns 301 results, all for sale operations, (4) Property type filter (apartment) - returns 0 results (no apartment data in current dataset), (5) Combined filters (faro + rent) - returns 49 results matching both criteria. Response structure verified: Contains required fields (region, location, display_info, detailed_stats, total_properties), DetailedPropertyStats with property_type/operation_type/avg_price_per_sqm/count, proper hierarchical display_info with full_display format (e.g., 'Aveiro > Agueda > Barrô e Aguada de Baixo'). Data structure properly groups by property_type (administrative_unit) and operation_type (sale/rent). Backward compatibility confirmed with avg_sale_price_per_sqm (3044.48 €/m²) and avg_rent_price_per_sqm (17.30 €/m²). All 41 backend tests passed successfully."
 
+  - task: "Targeted Scraping API Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: New targeted scraping endpoint POST /api/scrape/targeted working perfectly with all parameter combinations. Tested: (1) Missing distrito parameter - correctly returns 400 error with 'Distrito is required' message, (2) Distrito only (faro) - successfully starts scraping session for entire distrito with proper session_id and target information, (3) Distrito + Concelho (faro > tavira) - successfully starts targeted scraping for all freguesias in concelho, (4) Full hierarchy (faro > tavira > conceicao-e-cabanas-de-tavira) - successfully starts scraping for specific freguesia, (5) Invalid distrito - accepts request but background task correctly fails with proper error message 'Distrito not found in administrative structure'. Response structure verified: Contains session_id, descriptive message with target hierarchy (e.g., 'Scraping ciblé démarré pour: faro > tavira > conceicao-e-cabanas-de-tavira'), and target object with distrito/concelho/freguesia parameters. Integration testing confirmed: Sessions are properly created in database, background tasks execute correctly, and session status updates appropriately (running -> completed/failed). All targeted scraping functionality working as expected."
+
+  - task: "Detailed Coverage API Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: New detailed coverage endpoint GET /api/coverage/detailed working perfectly with comprehensive administrative structure analysis. Response structure verified: (1) Overview section contains total_distritos (29), scraped_distritos (7), total_concelhos (100), total_freguesias (1229), scraped_locations (76), scraped_concelhos (25), scraped_freguesias (76), (2) by_distrito array with nested administrative hierarchy - each distrito contains distrito_display with proper formatting (e.g., 'aveiro' -> 'Aveiro'), total/scraped counts for concelhos and freguesias, coverage percentages at concelho (100.0%) and freguesia (39.5%) levels, (3) Concelho-level details include concelho_display formatting, total_freguesias, scraped_freguesias, coverage_percentage calculations, and missing_freguesias arrays. Administrative display formatting working correctly throughout. Coverage calculations accurate: Aveiro distrito shows 5/5 concelhos scraped (100% coverage), 15/38 freguesias scraped (39.5% coverage). Integration with scraped data confirmed - coverage stats reflect actual database content and update dynamically as new data is scraped. All detailed coverage functionality verified successfully."
+
 ## agent_communication:
     - agent: "main"
       message: "✅ COMPLETE SUCCESS! All user requirements implemented and tested. PHP export already used clean hierarchical names. Frontend filtering system implemented and working perfectly. Fixed SelectItem empty value bug. Application fully functional with cascading district/concelho/freguesia filtering across all tabs."
