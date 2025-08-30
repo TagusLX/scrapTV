@@ -905,6 +905,271 @@ class IdealistaScraperAPITester:
         
         return all_tests_passed
 
+    def test_property_type_categorization(self):
+        """Test improved property type categorization and rural plot scraping functionality"""
+        print("\n🏠 Testing Property Type Categorization & Rural Plot Functionality...")
+        
+        all_tests_passed = True
+        
+        # First, clear existing properties to start fresh
+        print("   Clearing existing properties for clean test...")
+        self.run_test("Clear Properties for Testing", "DELETE", "properties", 200)
+        
+        # Test 1: Start targeted scraping to generate new property data
+        print("   Starting targeted scraping to test new property types...")
+        success1, response1 = self.run_test(
+            "Start Targeted Scraping for Property Types",
+            "POST",
+            "scrape/targeted?distrito=faro&concelho=tavira&freguesia=conceicao-e-cabanas-de-tavira",
+            200
+        )
+        
+        if success1 and 'session_id' in response1:
+            session_id = response1['session_id']
+            print(f"   ✅ Started scraping session: {session_id}")
+            
+            # Wait for scraping to complete
+            print("   Waiting for scraping to complete...")
+            import time
+            time.sleep(10)  # Give time for background task to process
+            
+            # Check session status
+            success_status, response_status = self.run_test(
+                "Check Scraping Session Status",
+                "GET",
+                f"scraping-sessions/{session_id}",
+                200
+            )
+            
+            if success_status:
+                status = response_status.get('status', 'unknown')
+                print(f"   Session status: {status}")
+                if status == 'completed':
+                    print(f"   ✅ Scraping completed with {response_status.get('total_properties', 0)} properties")
+                elif status == 'running':
+                    print("   ⏳ Scraping still running, continuing with tests...")
+                elif status == 'failed':
+                    print(f"   ❌ Scraping failed: {response_status.get('error_message', 'Unknown error')}")
+        else:
+            print("   ❌ Failed to start targeted scraping")
+            all_tests_passed = False
+        
+        # Test 2: Verify property types in database
+        print("   Testing property type categorization in database...")
+        success2, response2 = self.run_test(
+            "Get Properties to Check Types",
+            "GET",
+            "properties?limit=50",
+            200
+        )
+        
+        if success2 and response2:
+            print(f"   Found {len(response2)} properties")
+            
+            # Check for specific property types
+            property_types_found = set()
+            administrative_unit_count = 0
+            
+            for prop in response2:
+                prop_type = prop.get('property_type', 'unknown')
+                property_types_found.add(prop_type)
+                
+                if prop_type == 'administrative_unit':
+                    administrative_unit_count += 1
+            
+            print(f"   ✅ Property types found: {sorted(property_types_found)}")
+            
+            # Verify expected property types exist
+            expected_types = {'apartment', 'house', 'urban_plot', 'rural_plot'}
+            found_expected_types = property_types_found.intersection(expected_types)
+            
+            if found_expected_types:
+                print(f"   ✅ Found expected property types: {sorted(found_expected_types)}")
+            else:
+                print(f"   ❌ No expected property types found. Found: {sorted(property_types_found)}")
+                all_tests_passed = False
+            
+            # Verify no administrative_unit entries
+            if administrative_unit_count == 0:
+                print(f"   ✅ No 'administrative_unit' entries found (as expected)")
+            else:
+                print(f"   ❌ Found {administrative_unit_count} 'administrative_unit' entries (should be 0)")
+                all_tests_passed = False
+        else:
+            print("   ❌ Failed to retrieve properties")
+            all_tests_passed = False
+        
+        # Test 3: Verify property type multipliers in pricing
+        print("   Testing property type pricing multipliers...")
+        if success2 and response2:
+            # Group properties by type and calculate average prices
+            type_prices = {}
+            for prop in response2:
+                prop_type = prop.get('property_type', 'unknown')
+                price_per_sqm = prop.get('price_per_sqm')
+                
+                if price_per_sqm and price_per_sqm > 0:
+                    if prop_type not in type_prices:
+                        type_prices[prop_type] = []
+                    type_prices[prop_type].append(price_per_sqm)
+            
+            # Calculate averages and verify multipliers
+            type_averages = {}
+            for prop_type, prices in type_prices.items():
+                if prices:
+                    type_averages[prop_type] = sum(prices) / len(prices)
+            
+            print(f"   Property type average prices:")
+            for prop_type, avg_price in type_averages.items():
+                print(f"     {prop_type}: {avg_price:.2f} €/m²")
+            
+            # Verify relative pricing (multipliers)
+            if 'house' in type_averages and 'apartment' in type_averages:
+                apartment_ratio = type_averages['apartment'] / type_averages['house']
+                if 1.05 <= apartment_ratio <= 1.15:  # Should be ~1.1x
+                    print(f"   ✅ Apartment pricing multiplier correct: {apartment_ratio:.2f}x (expected ~1.1x)")
+                else:
+                    print(f"   ⚠️ Apartment pricing multiplier: {apartment_ratio:.2f}x (expected ~1.1x)")
+            
+            if 'house' in type_averages and 'urban_plot' in type_averages:
+                urban_plot_ratio = type_averages['urban_plot'] / type_averages['house']
+                if 0.35 <= urban_plot_ratio <= 0.45:  # Should be ~0.4x
+                    print(f"   ✅ Urban plot pricing multiplier correct: {urban_plot_ratio:.2f}x (expected ~0.4x)")
+                else:
+                    print(f"   ⚠️ Urban plot pricing multiplier: {urban_plot_ratio:.2f}x (expected ~0.4x)")
+            
+            if 'house' in type_averages and 'rural_plot' in type_averages:
+                rural_plot_ratio = type_averages['rural_plot'] / type_averages['house']
+                if 0.10 <= rural_plot_ratio <= 0.20:  # Should be ~0.15x
+                    print(f"   ✅ Rural plot pricing multiplier correct: {rural_plot_ratio:.2f}x (expected ~0.15x)")
+                else:
+                    print(f"   ⚠️ Rural plot pricing multiplier: {rural_plot_ratio:.2f}x (expected ~0.15x)")
+        
+        # Test 4: Verify rural plot URLs are only for sales
+        print("   Testing rural plot URL generation...")
+        rural_plots_found = 0
+        rural_plots_in_sales = 0
+        rural_plots_in_rentals = 0
+        
+        if success2 and response2:
+            for prop in response2:
+                if prop.get('property_type') == 'rural_plot':
+                    rural_plots_found += 1
+                    operation_type = prop.get('operation_type', 'unknown')
+                    
+                    if operation_type == 'sale':
+                        rural_plots_in_sales += 1
+                        # Verify URL pattern
+                        url = prop.get('url', '')
+                        if '/comprar-terrenos/' in url and '/com-terreno-nao-urbanizavel/' in url:
+                            print(f"   ✅ Rural plot sale URL correct: {url}")
+                        else:
+                            print(f"   ❌ Rural plot sale URL incorrect: {url}")
+                            all_tests_passed = False
+                    elif operation_type == 'rent':
+                        rural_plots_in_rentals += 1
+                        print(f"   ❌ Found rural plot in rentals (should not exist): {prop.get('url', '')}")
+                        all_tests_passed = False
+            
+            print(f"   Rural plots found: {rural_plots_found} (sales: {rural_plots_in_sales}, rentals: {rural_plots_in_rentals})")
+            
+            if rural_plots_in_rentals == 0:
+                print(f"   ✅ No rural plots found in rentals (as expected)")
+            else:
+                print(f"   ❌ Found {rural_plots_in_rentals} rural plots in rentals (should be 0)")
+                all_tests_passed = False
+        
+        # Test 5: Test detailed statistics with new property types
+        print("   Testing detailed statistics with new property types...")
+        
+        # Test urban_plot filter
+        success5a, response5a = self.run_test(
+            "Detailed Stats (property_type=urban_plot)",
+            "GET",
+            "stats/detailed?property_type=urban_plot",
+            200
+        )
+        
+        if success5a:
+            print(f"   Urban plot detailed stats: {len(response5a)} regions")
+            if response5a:
+                for stat in response5a:
+                    for detailed_stat in stat['detailed_stats']:
+                        if detailed_stat['property_type'] != 'urban_plot':
+                            print(f"   ❌ Found non-urban_plot in filter: {detailed_stat['property_type']}")
+                            all_tests_passed = False
+                            break
+                    else:
+                        continue
+                    break
+                else:
+                    print(f"   ✅ All detailed stats are for urban_plot properties")
+        
+        # Test rural_plot filter
+        success5b, response5b = self.run_test(
+            "Detailed Stats (property_type=rural_plot)",
+            "GET",
+            "stats/detailed?property_type=rural_plot",
+            200
+        )
+        
+        if success5b:
+            print(f"   Rural plot detailed stats: {len(response5b)} regions")
+            if response5b:
+                for stat in response5b:
+                    for detailed_stat in stat['detailed_stats']:
+                        if detailed_stat['property_type'] != 'rural_plot':
+                            print(f"   ❌ Found non-rural_plot in filter: {detailed_stat['property_type']}")
+                            all_tests_passed = False
+                            break
+                        # Verify rural plots are only in sales
+                        if detailed_stat['operation_type'] != 'sale':
+                            print(f"   ❌ Found rural plot in non-sale operation: {detailed_stat['operation_type']}")
+                            all_tests_passed = False
+                            break
+                    else:
+                        continue
+                    break
+                else:
+                    print(f"   ✅ All detailed stats are for rural_plot properties (sales only)")
+        
+        # Test 6: Verify proper categorization in detailed stats response
+        success6, response6 = self.run_test(
+            "Detailed Stats (categorization verification)",
+            "GET",
+            "stats/detailed?distrito=faro&limit=10",
+            200
+        )
+        
+        if success6 and response6:
+            print(f"   Verifying property type categorization in detailed stats...")
+            
+            all_property_types = set()
+            for stat in response6:
+                for detailed_stat in stat['detailed_stats']:
+                    all_property_types.add(detailed_stat['property_type'])
+            
+            print(f"   Property types in detailed stats: {sorted(all_property_types)}")
+            
+            # Check that we don't have administrative_unit in detailed stats
+            if 'administrative_unit' not in all_property_types:
+                print(f"   ✅ No 'administrative_unit' in detailed stats (as expected)")
+            else:
+                print(f"   ❌ Found 'administrative_unit' in detailed stats (should not exist)")
+                all_tests_passed = False
+            
+            # Check for expected property types
+            expected_in_stats = {'apartment', 'house', 'urban_plot', 'rural_plot'}
+            found_in_stats = all_property_types.intersection(expected_in_stats)
+            
+            if found_in_stats:
+                print(f"   ✅ Found expected property types in detailed stats: {sorted(found_in_stats)}")
+            else:
+                print(f"   ❌ No expected property types found in detailed stats")
+                all_tests_passed = False
+        
+        return all_tests_passed
+
 def main():
     print("🚀 Starting Idealista Scraper API Tests - Targeted Scraping & Detailed Coverage")
     print("=" * 70)
