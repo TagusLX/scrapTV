@@ -1380,34 +1380,47 @@ function tagus_value_get_market_data() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {properties.slice(0, 12).map((property) => (
-                    <div key={property.id} className="p-4 border rounded-lg bg-white/50 hover:bg-white/70 transition-colors">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline" className="capitalize">
-                            {property.property_type}
-                          </Badge>
-                          <Badge variant={property.operation_type === 'sale' ? 'default' : 'secondary'}>
-                            {property.operation_type === 'sale' ? 'Vente' : 'Location'}
-                          </Badge>
-                        </div>
-                        <h4 className="font-medium">
-                          {property.display_info ? property.display_info.full_display : `${property.region} - ${property.location}`}
-                        </h4>
-                        <div className="space-y-1 text-sm text-gray-600">
-                          {property.price && (
-                            <p>Prix: {formatCurrency(property.price)}</p>
-                          )}
-                          {property.area && (
-                            <p>Surface: {property.area} m²</p>
-                          )}
-                          {property.price_per_sqm && (
-                            <p>€/m²: {property.price_per_sqm.toFixed(0)} €/m²</p>
-                          )}
+                  {properties.slice(0, 12).map((property) => {
+                    const typeIcons = {
+                      'apartment': '🏢',
+                      'house': '🏠', 
+                      'plot': '📐'
+                    };
+                    const typeNames = {
+                      'apartment': 'Appartement',
+                      'house': 'Maison',
+                      'plot': 'Terrain'
+                    };
+                    
+                    return (
+                      <div key={property.id} className="p-4 border rounded-lg bg-white/50 hover:bg-white/70 transition-colors">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className="capitalize">
+                              {typeIcons[property.property_type] || '📄'} {typeNames[property.property_type] || property.property_type}
+                            </Badge>
+                            <Badge variant={property.operation_type === 'sale' ? 'default' : 'secondary'}>
+                              {property.operation_type === 'sale' ? '💰 Vente' : '🏠 Location'}
+                            </Badge>
+                          </div>
+                          <h4 className="font-medium">
+                            {property.display_info ? property.display_info.full_display : `${property.region} - ${property.location}`}
+                          </h4>
+                          <div className="space-y-1 text-sm text-gray-600">
+                            {property.price && (
+                              <p>Prix: {formatCurrency(property.price)}</p>
+                            )}
+                            {property.area && (
+                              <p>Surface: {property.area} m²</p>
+                            )}
+                            {property.price_per_sqm && (
+                              <p className="font-medium text-blue-600">Prix/m²: {property.price_per_sqm.toFixed(0)} €/m²</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
