@@ -186,8 +186,7 @@ The user requested enhancements to an existing real estate data scraping applica
 
 ## test_plan:
   current_focus:
-    - "Filtering UI Components"
-    - "Apply Filters to All Tabs"
+    - "Detailed Statistics API Endpoint"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
