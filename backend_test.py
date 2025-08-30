@@ -1171,22 +1171,26 @@ class IdealistaScraperAPITester:
         return all_tests_passed
 
 def main():
-    print("🚀 Starting Idealista Scraper API Tests - Targeted Scraping & Detailed Coverage")
-    print("=" * 70)
+    print("🚀 Starting Idealista Scraper API Tests - Property Type Categorization & Rural Plot Testing")
+    print("=" * 80)
     
     tester = IdealistaScraperAPITester()
     
-    # Test NEW targeted scraping endpoint (main focus)
-    print("\n🎯 MAIN TEST: Targeted Scraping Endpoint Verification")
+    # Test NEW property type categorization and rural plot functionality (MAIN FOCUS)
+    print("\n🏠 MAIN TEST: Property Type Categorization & Rural Plot Functionality")
+    property_type_test_passed = tester.test_property_type_categorization()
+    
+    # Test detailed statistics endpoint with new property types
+    print("\n📈 Testing Detailed Statistics Endpoint with New Property Types")
+    detailed_stats_test_passed = tester.test_detailed_stats_endpoint()
+    
+    # Test NEW targeted scraping endpoint
+    print("\n🎯 Testing Targeted Scraping Endpoint")
     targeted_scraping_test_passed = tester.test_targeted_scraping_endpoint()
     
-    # Test NEW detailed coverage endpoint (main focus)
-    print("\n📊 MAIN TEST: Detailed Coverage Endpoint Verification")
+    # Test NEW detailed coverage endpoint
+    print("\n📊 Testing Detailed Coverage Endpoint")
     detailed_coverage_test_passed = tester.test_detailed_coverage_endpoint()
-    
-    # Test detailed statistics endpoint
-    print("\n📈 Testing Detailed Statistics Endpoint")
-    detailed_stats_test_passed = tester.test_detailed_stats_endpoint()
     
     # Test URL generation patterns
     print("\n🔗 Testing URL Generation Pattern Verification")
@@ -1243,23 +1247,24 @@ def main():
     tester.test_clear_properties()
     
     # Final results
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 80)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
     # Special focus on new functionality verification
-    print(f"\n🎯 NEW FUNCTIONALITY VERIFICATION RESULTS:")
+    print(f"\n🏠 PROPERTY TYPE CATEGORIZATION & RURAL PLOT TESTING RESULTS:")
+    print(f"   Property Type Categorization Test: {'✅ PASSED' if property_type_test_passed else '❌ FAILED'}")
+    print(f"   Detailed Stats Test: {'✅ PASSED' if detailed_stats_test_passed else '❌ FAILED'}")
     print(f"   Targeted Scraping Test: {'✅ PASSED' if targeted_scraping_test_passed else '❌ FAILED'}")
     print(f"   Detailed Coverage Test: {'✅ PASSED' if detailed_coverage_test_passed else '❌ FAILED'}")
-    print(f"   Detailed Stats Test: {'✅ PASSED' if detailed_stats_test_passed else '❌ FAILED'}")
     print(f"   URL Pattern Test: {'✅ PASSED' if url_test_passed else '❌ FAILED'}")
     print(f"   Administrative Test: {'✅ PASSED' if admin_test_passed else '❌ FAILED'}")
     print(f"   Filtering Test: {'✅ PASSED' if filter_test_passed else '❌ FAILED'}")
     
     # Check if main new features passed
-    new_features_passed = targeted_scraping_test_passed and detailed_coverage_test_passed
+    main_features_passed = property_type_test_passed and detailed_stats_test_passed
     
-    if tester.tests_passed == tester.tests_run and new_features_passed:
-        print("🎉 All tests passed! New targeted scraping and detailed coverage functionality verified successfully!")
+    if tester.tests_passed == tester.tests_run and main_features_passed:
+        print("🎉 All tests passed! Property type categorization and rural plot functionality verified successfully!")
         return 0
     else:
         print("❌ Some tests failed!")
