@@ -107,8 +107,8 @@ const Dashboard = () => {
 
   const retryFailedZones = async (sessionId) => {
     try {
-      const response = await axios.post(`${API}/scraping-sessions/${sessionId}/retry-failed`);
-      alert(`✅ ${response.data.message}\nNouvelle session ID: ${response.data.session_id}`);
+      const response = await axios.post(`${API}/scrape/retry-failed?session_id=${sessionId}`);
+      alert(`✅ ${response.data.message}\nNouvelle session ID: ${response.data.retry_session_id}`);
       
       // Refresh sessions
       fetchScrapingSessions();
