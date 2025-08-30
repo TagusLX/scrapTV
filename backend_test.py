@@ -905,6 +905,301 @@ class IdealistaScraperAPITester:
         
         return all_tests_passed
 
+    def test_enhanced_error_handling_and_retry(self):
+        """Test enhanced error handling and retry functionality for scraping sessions"""
+        print("\n🔧 Testing Enhanced Error Handling & Retry Functionality...")
+        
+        all_tests_passed = True
+        
+        # Test 1: Enhanced Scraping Session Model - Test session creation with error tracking fields
+        print("   Testing Enhanced Scraping Session Model...")
+        success1, response1 = self.run_test(
+            "Start Scraping Session (Enhanced Model)",
+            "POST",
+            "scrape/targeted?distrito=faro&concelho=tavira&freguesia=conceicao-e-cabanas-de-tavira",
+            200
+        )
+        
+        enhanced_session_id = None
+        if success1 and 'session_id' in response1:
+            enhanced_session_id = response1['session_id']
+            print(f"   ✅ Enhanced session created: {enhanced_session_id}")
+            
+            # Wait for scraping to process and generate some results
+            import time
+            time.sleep(8)
+            
+            # Check session details to verify enhanced fields
+            success_check, response_check = self.run_test(
+                "Check Enhanced Session Fields",
+                "GET",
+                f"scraping-sessions/{enhanced_session_id}",
+                200
+            )
+            
+            if success_check:
+                # Verify enhanced fields exist
+                if 'failed_zones' in response_check:
+                    print(f"   ✅ Found failed_zones field: {len(response_check.get('failed_zones', []))} entries")
+                else:
+                    print(f"   ❌ Missing failed_zones field")
+                    all_tests_passed = False
+                
+                if 'success_zones' in response_check:
+                    print(f"   ✅ Found success_zones field: {len(response_check.get('success_zones', []))} entries")
+                else:
+                    print(f"   ❌ Missing success_zones field")
+                    all_tests_passed = False
+        else:
+            print("   ❌ Failed to create enhanced session")
+            all_tests_passed = False
+        
+        # Test 2: Error Analysis Endpoint
+        if enhanced_session_id:
+            print("   Testing Error Analysis Endpoint...")
+            success2, response2 = self.run_test(
+                "Get Scraping Session Errors",
+                "GET",
+                f"scraping-sessions/{enhanced_session_id}/errors",
+                200
+            )
+            
+            if success2:
+                print(f"   ✅ Retrieved error analysis for session")
+                
+                # Verify error summary structure
+                required_fields = ['total_zones_attempted', 'failed_zones_count', 'success_zones_count', 'failure_rate', 'common_errors', 'failed_zones', 'success_zones']
+                for field in required_fields:
+                    if field in response2:
+                        print(f"   ✅ Found error analysis field '{field}': {response2[field]}")
+                    else:
+                        print(f"   ❌ Missing error analysis field: {field}")
+                        all_tests_passed = False
+                
+                # Verify failure rate calculation
+                if 'failure_rate' in response2:
+                    failure_rate = response2['failure_rate']
+                    if isinstance(failure_rate, (int, float)) and 0 <= failure_rate <= 100:
+                        print(f"   ✅ Valid failure rate calculation: {failure_rate:.1f}%")
+                    else:
+                        print(f"   ❌ Invalid failure rate: {failure_rate}")
+                        all_tests_passed = False
+                
+                # Check common error type counting
+                if 'common_errors' in response2:
+                    common_errors = response2['common_errors']
+                    if isinstance(common_errors, dict):
+                        print(f"   ✅ Common errors structure valid: {len(common_errors)} error types")
+                        for error_type, count in common_errors.items():
+                            print(f"     - {error_type}: {count} occurrences")
+                    else:
+                        print(f"   ❌ Invalid common_errors structure")
+                        all_tests_passed = False
+            else:
+                print("   ❌ Failed to retrieve error analysis")
+                all_tests_passed = False
+        
+        # Test 3: Test Error Analysis for Non-existent Session
+        print("   Testing Error Analysis for Non-existent Session...")
+        success3, response3 = self.run_test(
+            "Get Errors for Non-existent Session",
+            "GET",
+            "scraping-sessions/fake-session-123/errors",
+            404
+        )
+        
+        if success3:
+            print(f"   ✅ Correctly returned 404 for non-existent session")
+        else:
+            print(f"   ❌ Failed to handle non-existent session properly")
+            all_tests_passed = False
+        
+        # Test 4: Retry Functionality - Test retry for all failed zones
+        if enhanced_session_id:
+            print("   Testing Retry Functionality...")
+            
+            # First, check if there are any failed zones to retry
+            success_check, response_check = self.run_test(
+                "Check for Failed Zones",
+                "GET",
+                f"scraping-sessions/{enhanced_session_id}/errors",
+                200
+            )
+            
+            if success_check and response_check.get('failed_zones_count', 0) > 0:
+                print(f"   Found {response_check['failed_zones_count']} failed zones to retry")
+                
+                # Test retry all failed zones
+                success4, response4 = self.run_test(
+                    "Retry All Failed Zones",
+                    "POST",
+                    f"scrape/retry-failed?session_id={enhanced_session_id}",
+                    200
+                )
+                
+                if success4:
+                    print(f"   ✅ Started retry for all failed zones")
+                    
+                    # Verify retry response structure
+                    required_retry_fields = ['message', 'retry_session_id', 'original_session_id', 'zones_to_retry']
+                    for field in required_retry_fields:
+                        if field in response4:
+                            print(f"   ✅ Found retry field '{field}': {response4[field]}")
+                        else:
+                            print(f"   ❌ Missing retry field: {field}")
+                            all_tests_passed = False
+                    
+                    # Verify new retry session was created
+                    if 'retry_session_id' in response4:
+                        retry_session_id = response4['retry_session_id']
+                        time.sleep(3)  # Wait for retry session to start
+                        
+                        success_retry_check, response_retry_check = self.run_test(
+                            "Check Retry Session Status",
+                            "GET",
+                            f"scraping-sessions/{retry_session_id}",
+                            200
+                        )
+                        
+                        if success_retry_check:
+                            retry_status = response_retry_check.get('status', 'unknown')
+                            print(f"   ✅ Retry session created with status: {retry_status}")
+                        else:
+                            print(f"   ❌ Failed to verify retry session")
+                            all_tests_passed = False
+                else:
+                    print("   ❌ Failed to start retry for failed zones")
+                    all_tests_passed = False
+            else:
+                print("   ⚠️ No failed zones found to test retry functionality")
+                # Create a scenario with failed zones by using invalid parameters
+                print("   Creating scenario with failed zones...")
+                
+                success_fail, response_fail = self.run_test(
+                    "Create Session with Failures",
+                    "POST",
+                    "scrape/targeted?distrito=invalid_distrito&concelho=invalid_concelho",
+                    200
+                )
+                
+                if success_fail and 'session_id' in response_fail:
+                    fail_session_id = response_fail['session_id']
+                    time.sleep(5)  # Wait for it to fail
+                    
+                    # Now test retry on this failed session
+                    success_retry_fail, response_retry_fail = self.run_test(
+                        "Retry Failed Session",
+                        "POST",
+                        f"scrape/retry-failed?session_id={fail_session_id}",
+                        200
+                    )
+                    
+                    if success_retry_fail:
+                        print(f"   ✅ Successfully tested retry on failed session")
+                    else:
+                        print(f"   ❌ Failed to test retry on failed session")
+                        all_tests_passed = False
+        
+        # Test 5: Test retry for non-existent session
+        print("   Testing Retry for Non-existent Session...")
+        success5, response5 = self.run_test(
+            "Retry Non-existent Session",
+            "POST",
+            "scrape/retry-failed?session_id=fake-session-123",
+            404
+        )
+        
+        if success5:
+            print(f"   ✅ Correctly returned 404 for non-existent session retry")
+        else:
+            print(f"   ❌ Failed to handle non-existent session retry properly")
+            all_tests_passed = False
+        
+        # Test 6: Test retry with no failed zones
+        if enhanced_session_id:
+            print("   Testing Retry with No Failed Zones...")
+            
+            # Create a new successful session first
+            success_good, response_good = self.run_test(
+                "Create Successful Session",
+                "POST",
+                "scrape/targeted?distrito=faro&concelho=faro",  # Use a simpler target
+                200
+            )
+            
+            if success_good and 'session_id' in response_good:
+                good_session_id = response_good['session_id']
+                time.sleep(5)  # Wait for completion
+                
+                # Try to retry this session (should have no failed zones)
+                success_no_fail, response_no_fail = self.run_test(
+                    "Retry Session with No Failed Zones",
+                    "POST",
+                    f"scrape/retry-failed?session_id={good_session_id}",
+                    400  # Should return 400 if no failed zones
+                )
+                
+                if success_no_fail:
+                    print(f"   ✅ Correctly handled session with no failed zones")
+                else:
+                    print(f"   ⚠️ Session might have failed zones or different behavior")
+        
+        # Test 7: Test Enhanced Scraping Method - Real Price Detection
+        print("   Testing Enhanced Scraping Method - Real Price Detection...")
+        
+        # Start a new scraping session to test the enhanced method
+        success7, response7 = self.run_test(
+            "Test Enhanced Scraping Method",
+            "POST",
+            "scrape/targeted?distrito=faro&concelho=lagos&freguesia=luz",
+            200
+        )
+        
+        if success7 and 'session_id' in response7:
+            enhanced_method_session_id = response7['session_id']
+            print(f"   ✅ Started enhanced scraping method test: {enhanced_method_session_id}")
+            
+            # Wait for scraping to complete
+            time.sleep(10)
+            
+            # Check the session for detailed error information
+            success_method_check, response_method_check = self.run_test(
+                "Check Enhanced Method Results",
+                "GET",
+                f"scraping-sessions/{enhanced_method_session_id}/errors",
+                200
+            )
+            
+            if success_method_check:
+                failed_zones = response_method_check.get('failed_zones', [])
+                success_zones = response_method_check.get('success_zones', [])
+                
+                print(f"   Enhanced method results: {len(success_zones)} success, {len(failed_zones)} failed")
+                
+                # Check for detailed error messages in failed zones
+                for failed_zone in failed_zones:
+                    if 'errors' in failed_zone:
+                        for error in failed_zone['errors']:
+                            error_msg = error.get('error', '')
+                            if 'items-average-price' in error_msg or 'Preço médio nesta zona' in error_msg:
+                                print(f"   ✅ Found enhanced error detection: {error_msg}")
+                            elif 'HTTP' in error_msg:
+                                print(f"   ✅ Found HTTP status error capture: {error_msg}")
+                
+                # Check success zones for property counts
+                for success_zone in success_zones:
+                    if 'properties_count' in success_zone:
+                        count = success_zone['properties_count']
+                        print(f"   ✅ Success zone recorded with {count} properties")
+            else:
+                print("   ❌ Failed to check enhanced method results")
+                all_tests_passed = False
+        else:
+            print("   ❌ Failed to start enhanced scraping method test")
+            all_tests_passed = False
+        
+        return all_tests_passed
+
     def test_property_type_categorization(self):
         """Test improved property type categorization and rural plot scraping functionality"""
         print("\n🏠 Testing Property Type Categorization & Rural Plot Functionality...")
