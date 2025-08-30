@@ -1384,12 +1384,16 @@ function tagus_value_get_market_data() {
                     const typeIcons = {
                       'apartment': '🏢',
                       'house': '🏠', 
-                      'plot': '📐'
+                      'urban_plot': '🏗️',
+                      'rural_plot': '🌾',
+                      'administrative_unit': '📄'
                     };
                     const typeNames = {
                       'apartment': 'Appartement',
                       'house': 'Maison',
-                      'plot': 'Terrain'
+                      'urban_plot': 'Terrain Urbain',
+                      'rural_plot': 'Terrain Agricole',
+                      'administrative_unit': 'Unité Administrative'
                     };
                     
                     return (
