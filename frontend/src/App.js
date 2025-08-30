@@ -654,6 +654,7 @@ function tagus_value_get_market_data() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* First Row - Administrative Filters */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Distrito Filter */}
               <div className="space-y-2">
@@ -724,11 +725,54 @@ function tagus_value_get_market_data() {
                   onClick={clearFilters} 
                   variant="outline" 
                   className="w-full"
-                  disabled={!selectedDistrito && !selectedConcelho && !selectedFreguesia}
+                  disabled={!selectedDistrito && !selectedConcelho && !selectedFreguesia && !selectedOperationType && !selectedPropertyType}
                 >
                   Effacer Filtres
                 </Button>
               </div>
+            </div>
+
+            {/* Second Row - Property Type and Operation Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Operation Type Filter */}
+              <div className="space-y-2">
+                <Label>Type d'Opération</Label>
+                <Select 
+                  value={selectedOperationType || "all"} 
+                  onValueChange={(value) => setSelectedOperationType(value === "all" ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vente ou Location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Vente et Location</SelectItem>
+                    <SelectItem value="sale">Vente uniquement</SelectItem>
+                    <SelectItem value="rent">Location uniquement</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Property Type Filter */}
+              <div className="space-y-2">
+                <Label>Type de Bien</Label>
+                <Select 
+                  value={selectedPropertyType || "all"} 
+                  onValueChange={(value) => setSelectedPropertyType(value === "all" ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="apartment">Appartements</SelectItem>
+                    <SelectItem value="house">Maisons</SelectItem>
+                    <SelectItem value="plot">Terrains (tous)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Spacer */}
+              <div></div>
             </div>
 
             {/* Filter Summary */}
