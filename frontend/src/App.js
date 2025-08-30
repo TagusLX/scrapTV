@@ -1433,6 +1433,76 @@ function tagus_value_get_market_data() {
                 <CardDescription>Données de marché agrégées par région et localisation</CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Summary by Property Type */}
+                {detailedStats.length > 0 && (
+                  <div className="mb-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4">📊 Résumé par Type de Bien</h3>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Calculate summary by property type */}
+                      {(() => {
+                        const summary = {};
+                        detailedStats.forEach(stat => {
+                          stat.detailed_stats.forEach(detail => {
+                            const key = detail.property_type;
+                            if (!summary[key]) {
+                              summary[key] = { sale: [], rent: [] };
+                            }
+                            if (detail.operation_type === 'sale' && detail.avg_price_per_sqm) {
+                              summary[key].sale.push(detail.avg_price_per_sqm);
+                            }
+                            if (detail.operation_type === 'rent' && detail.avg_price_per_sqm) {
+                              summary[key].rent.push(detail.avg_price_per_sqm);
+                            }
+                          });
+                        });
+                        
+                        return Object.entries(summary).map(([propType, data]) => {
+                          const typeInfo = {
+                            'apartment': { icon: '🏢', name: 'Appartements', color: 'blue' },
+                            'house': { icon: '🏠', name: 'Maisons', color: 'green' },
+                            'plot': { icon: '📐', name: 'Terrains', color: 'purple' }
+                          };
+                          
+                          const info = typeInfo[propType] || { icon: '📄', name: propType, color: 'gray' };
+                          const avgSale = data.sale.length > 0 ? data.sale.reduce((a, b) => a + b) / data.sale.length : null;
+                          const avgRent = data.rent.length > 0 ? data.rent.reduce((a, b) => a + b) / data.rent.length : null;
+                          
+                          return (
+                            <div key={propType} className={`p-4 bg-white rounded-lg border border-${info.color}-200`}>
+                              <h4 className="flex items-center gap-2 font-medium text-gray-800 mb-3">
+                                <span className="text-lg">{info.icon}</span>
+                                {info.name}
+                              </h4>
+                              
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-blue-600">💰 Vente</span>
+                                  <span className={`font-semibold text-${info.color}-700`}>
+                                    {avgSale ? `${avgSale.toFixed(0)} €/m²` : 'N/A'}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-green-600">🏠 Location</span>
+                                  <span className={`font-semibold text-${info.color}-700`}>
+                                    {avgRent ? `${avgRent.toFixed(0)} €/m²` : 'N/A'}
+                                  </span>
+                                </div>
+                                
+                                <div className="text-xs text-gray-500 pt-2 border-t">
+                                  {data.sale.length + data.rent.length} zones analysées
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Regional Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {regionStats.map((stat, index) => (
                     <div key={index} className="p-6 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
