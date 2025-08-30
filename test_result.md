@@ -241,6 +241,18 @@ The user requested enhancements to an existing real estate data scraping applica
           agent: "testing"
           comment: "✅ TESTED: New detailed coverage endpoint GET /api/coverage/detailed working perfectly with comprehensive administrative structure analysis. Response structure verified: (1) Overview section contains total_distritos (29), scraped_distritos (7), total_concelhos (100), total_freguesias (1229), scraped_locations (76), scraped_concelhos (25), scraped_freguesias (76), (2) by_distrito array with nested administrative hierarchy - each distrito contains distrito_display with proper formatting (e.g., 'aveiro' -> 'Aveiro'), total/scraped counts for concelhos and freguesias, coverage percentages at concelho (100.0%) and freguesia (39.5%) levels, (3) Concelho-level details include concelho_display formatting, total_freguesias, scraped_freguesias, coverage_percentage calculations, and missing_freguesias arrays. Administrative display formatting working correctly throughout. Coverage calculations accurate: Aveiro distrito shows 5/5 concelhos scraped (100% coverage), 15/38 freguesias scraped (39.5% coverage). Integration with scraped data confirmed - coverage stats reflect actual database content and update dynamically as new data is scraped. All detailed coverage functionality verified successfully."
 
+  - task: "Property Type Categorization and Rural Plot Functionality"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE TESTING COMPLETE: All 5 property type categorization and rural plot functionality tests PASSED successfully. (1) PROPERTY TYPE CATEGORIZATION: Verified scrape_freguesia method generates properties with specific types (apartment, house, urban_plot, rural_plot) - found all 4 expected types in 72 properties, zero 'administrative_unit' entries as required. (2) PROPERTY TYPE MULTIPLIERS: Confirmed realistic pricing multipliers - apartments 1.12x houses (expected ~1.1x), urban plots 0.41x houses (expected ~0.4x), rural plots 0.15x houses (expected ~0.15x) - all within acceptable ranges. (3) RURAL PLOT URLs: Verified 12 rural plot properties all have correct sale URLs (/comprar-terrenos/.../com-terreno-nao-urbanizavel/) and zero rural plots in rentals as expected. (4) DETAILED STATISTICS FILTERING: Confirmed filtering by property_type=urban_plot and property_type=rural_plot works correctly, rural plots only appear in sale operations. (5) DATABASE ENTRIES: Verified detailed stats contain only expected property types (apartment, house, rural_plot, urban_plot) with no administrative_unit entries. The improved scraping system successfully generates proper property type data with realistic pricing according to multipliers, and rural agricultural plots are properly included with correct URLs for sales only."
+
 ## frontend:
   - task: "Complete Frontend Interface Testing"
     implemented: true
