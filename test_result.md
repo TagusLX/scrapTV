@@ -205,6 +205,18 @@ The user requested enhancements to an existing real estate data scraping applica
           agent: "testing"
           comment: "✅ TESTED: URL correction verified successfully. The scraping system now uses correct URL patterns. For 'Faro > Tavira > Conceicao e Cabanas de Tavira': Sale URL: https://www.idealista.pt/comprar-casas/tavira/conceicao-e-cabanas-de-tavira/, Rent URL: https://www.idealista.pt/arrendar-casas/tavira/conceicao-e-cabanas-de-tavira/com-arrendamento-longa-duracao/. All URL patterns verified: General sales (/comprar-casas/), Apartments (/com-apartamentos/), Houses (/com-moradias/), Urban land (/com-terreno-urbano/), Rural land (/com-terreno-nao-urbanizavel/), General rentals (/com-arrendamento-longa-duracao/), Apartment rentals (/com-apartamentos,arrendamento-longa-duracao/), House rentals (/com-moradias,arrendamento-longa-duracao/). No old '/media/relatorios-preco-habitacao/' format found in scraping URLs. Administrative structure endpoints confirmed 'Conceicao e Cabanas de Tavira' is available in Faro/Tavira."
 
+  - task: "Detailed Statistics API Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: New detailed statistics endpoint GET /api/stats/detailed working perfectly with all filter combinations. Tested: (1) No filters - returns 301 detailed stats with proper ExtendedRegionStats structure including detailed_stats array, (2) Distrito filter (faro) - returns 49 filtered results, all from Faro district, (3) Operation type filter (sale) - returns 301 results, all for sale operations, (4) Property type filter (apartment) - returns 0 results (no apartment data in current dataset), (5) Combined filters (faro + rent) - returns 49 results matching both criteria. Response structure verified: Contains required fields (region, location, display_info, detailed_stats, total_properties), DetailedPropertyStats with property_type/operation_type/avg_price_per_sqm/count, proper hierarchical display_info with full_display format (e.g., 'Aveiro > Agueda > Barrô e Aguada de Baixo'). Data structure properly groups by property_type (administrative_unit) and operation_type (sale/rent). Backward compatibility confirmed with avg_sale_price_per_sqm (3044.48 €/m²) and avg_rent_price_per_sqm (17.30 €/m²). All 41 backend tests passed successfully."
+
 ## agent_communication:
     - agent: "main"
       message: "✅ COMPLETE SUCCESS! All user requirements implemented and tested. PHP export already used clean hierarchical names. Frontend filtering system implemented and working perfectly. Fixed SelectItem empty value bug. Application fully functional with cascading district/concelho/freguesia filtering across all tabs."
