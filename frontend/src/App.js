@@ -813,9 +813,10 @@ function tagus_value_get_market_data() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les types</SelectItem>
-                    <SelectItem value="apartment">Appartements</SelectItem>
-                    <SelectItem value="house">Maisons</SelectItem>
-                    <SelectItem value="plot">Terrains (tous)</SelectItem>
+                    <SelectItem value="apartment">🏢 Appartements</SelectItem>
+                    <SelectItem value="house">🏠 Maisons</SelectItem>
+                    <SelectItem value="urban_plot">🏗️ Terrains Urbains</SelectItem>
+                    <SelectItem value="rural_plot">🌾 Terrains Agricoles</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
