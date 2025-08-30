@@ -1465,7 +1465,9 @@ function tagus_value_get_market_data() {
                           const typeInfo = {
                             'apartment': { icon: '🏢', name: 'Appartements', color: 'blue' },
                             'house': { icon: '🏠', name: 'Maisons', color: 'green' },
-                            'plot': { icon: '📐', name: 'Terrains', color: 'purple' }
+                            'urban_plot': { icon: '🏗️', name: 'Terrains Urbains', color: 'purple' },
+                            'rural_plot': { icon: '🌾', name: 'Terrains Agricoles', color: 'amber' },
+                            'administrative_unit': { icon: '📄', name: 'Unités Administratives', color: 'gray' }
                           };
                           
                           const info = typeInfo[propType] || { icon: '📄', name: propType, color: 'gray' };
