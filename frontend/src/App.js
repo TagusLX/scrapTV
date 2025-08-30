@@ -846,6 +846,118 @@ function tagus_value_get_market_data() {
           </CardContent>
         </Card>
 
+        {/* Targeted Scraping Panel */}
+        <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-orange-600" />
+              Scraping Ciblé par Région
+            </CardTitle>
+            <CardDescription>
+              Lancer un scraping spécifique pour un distrito, concelho ou freguesia
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Target Selection - reuse existing filters */}
+              <div className="space-y-2">
+                <Label>Distrito à scraper *</Label>
+                <Select value={selectedDistrito || "none"} onValueChange={handleDistritoChange}>
+                  <SelectTrigger className="border-orange-200">
+                    <SelectValue placeholder="Choisir distrito" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" disabled>Sélectionner distrito</SelectItem>
+                    {districts.map((distrito) => (
+                      <SelectItem key={distrito.id} value={distrito.id}>
+                        {distrito.name_display}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Concelho (optionnel)</Label>
+                <Select 
+                  value={selectedConcelho || "none"}
+                  onValueChange={handleConcelhoChange}
+                  disabled={!selectedDistrito}
+                >
+                  <SelectTrigger className="border-orange-200">
+                    <SelectValue placeholder="Tout le distrito" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tout le distrito</SelectItem>
+                    {concelhos.map((concelho) => (
+                      <SelectItem key={concelho.id} value={concelho.id}>
+                        {concelho.name_display}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Freguesia (optionnel)</Label>
+                <Select 
+                  value={selectedFreguesia || "none"}
+                  onValueChange={handleFrequesiaChange}
+                  disabled={!selectedConcelho}
+                >
+                  <SelectTrigger className="border-orange-200">
+                    <SelectValue placeholder="Tout le concelho" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tout le concelho</SelectItem>
+                    {freguesias.map((freguesia) => (
+                      <SelectItem key={freguesia.id} value={freguesia.id}>
+                        {freguesia.name_display}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <Button 
+                  onClick={startTargetedScraping}
+                  disabled={!selectedDistrito || targetedScrapingLoading}
+                  className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800"
+                >
+                  {targetedScrapingLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Scraping...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Scraper Zone
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Target Summary */}
+            {selectedDistrito && (
+              <div className="p-3 bg-orange-50 rounded-lg">
+                <p className="text-sm text-orange-800">
+                  <strong>Zone ciblée:</strong> {
+                    [
+                      districts.find(d => d.id === selectedDistrito)?.name_display,
+                      selectedConcelho && concelhos.find(c => c.id === selectedConcelho)?.name_display,
+                      selectedFreguesia && freguesias.find(f => f.id === selectedFreguesia)?.name_display
+                    ].filter(Boolean).join(' > ') || selectedDistrito
+                  }
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Main Content */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 bg-white/50 backdrop-blur-sm">
