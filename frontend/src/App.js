@@ -348,17 +348,21 @@ function tagus_value_get_market_data() {
   const applyFilters = () => {
     fetchProperties();
     fetchRegionStats();
+    fetchDetailedStats();
   };
 
   const clearFilters = () => {
     setSelectedDistrito("");
     setSelectedConcelho("");
     setSelectedFreguesia("");
+    setSelectedOperationType("");
+    setSelectedPropertyType("");
     setConcelhos([]);
     setFreguesias([]);
     // Fetch unfiltered data
     fetchProperties();
     fetchRegionStats();
+    fetchDetailedStats();
   };
 
   const clearAllData = async () => {
