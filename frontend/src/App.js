@@ -420,7 +420,7 @@ function tagus_value_get_market_data() {
   // Effect to fetch data when filters change
   useEffect(() => {
     applyFilters();
-  }, [selectedDistrito, selectedConcelho, selectedFreguesia]);
+  }, [selectedDistrito, selectedConcelho, selectedFreguesia, selectedOperationType, selectedPropertyType]);
 
   useEffect(() => {
     fetchScrapingSessions();
