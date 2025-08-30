@@ -186,7 +186,8 @@ The user requested enhancements to an existing real estate data scraping applica
 
 ## test_plan:
   current_focus:
-    - "Detailed Statistics API Endpoint"
+    - "Targeted Scraping API Endpoint"
+    - "Detailed Coverage API Endpoint"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
