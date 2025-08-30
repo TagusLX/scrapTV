@@ -106,6 +106,24 @@ class RegionStats(BaseModel):
     # Add display formatting
     display_info: Optional[dict] = None
 
+class DetailedPropertyStats(BaseModel):
+    property_type: str  # apartment, house, urban_plot, rural_plot
+    operation_type: str  # sale, rent
+    avg_price_per_sqm: Optional[float] = None
+    avg_price: Optional[float] = None
+    count: int = 0
+
+class ExtendedRegionStats(BaseModel):
+    region: str
+    location: str
+    display_info: Optional[dict] = None
+    # General stats (backward compatibility)
+    avg_sale_price_per_sqm: Optional[float] = None
+    avg_rent_price_per_sqm: Optional[float] = None
+    total_properties: int = 0
+    # Detailed stats by property type and operation
+    detailed_stats: List[DetailedPropertyStats] = []
+
 @api_router.delete("/properties")
 async def clear_all_properties():
     """Clear all scraped properties"""
