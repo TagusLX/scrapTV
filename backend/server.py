@@ -779,56 +779,70 @@ class IdealistaScraper:
                             # Look for price information in the HTML
                             soup = BeautifulSoup(response.content, 'html.parser')
                             
-                            # First, search for the specific "Preço médio nesta zona" text
+                            # First, search for the specific "items-average-price" class
+                            zone_price_elements = soup.find_all(class_="items-average-price")
                             zone_price_found = False
-                            page_text = soup.get_text()
                             
-                            # Look for "Preço médio nesta zona" pattern
-                            zone_patterns = [
-                                r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
-                                r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
-                                r'médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
-                            ]
+                            for elem in zone_price_elements:
+                                try:
+                                    price_text = elem.get_text()
+                                    logger.info(f"Found items-average-price element: {price_text}")
+                                    
+                                    # Look for price patterns like "11,05 eur/m²"
+                                    price_patterns = [
+                                        r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',  # "11,05 eur/m²"
+                                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',   # "11,05 €/m²"
+                                        r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?' # "11,05 euros/m²"
+                                    ]
+                                    
+                                    for pattern in price_patterns:
+                                        price_match = re.search(pattern, price_text, re.IGNORECASE)
+                                        if price_match:
+                                            price_str = price_match.group(1).replace(',', '.')
+                                            try:
+                                                zone_price = float(price_str)
+                                                if 0.5 <= zone_price <= 1000:  # Reasonable range
+                                                    average_price_per_sqm = zone_price
+                                                    real_data_found = True
+                                                    zone_price_found = True
+                                                    logger.info(f"✅ REAL SCRAPED PRICE via requests from items-average-price: {average_price_per_sqm:.2f} €/m²")
+                                                    break
+                                            except:
+                                                continue
+                                    if zone_price_found:
+                                        break
+                                except:
+                                    continue
                             
-                            for pattern in zone_patterns:
-                                zone_match = re.search(pattern, page_text, re.IGNORECASE)
-                                if zone_match:
-                                    price_str = zone_match.group(1).replace(',', '.')
-                                    try:
-                                        zone_price = float(price_str)
-                                        if 1 <= zone_price <= 500:  # Reasonable range for zone averages
-                                            average_price_per_sqm = zone_price
-                                            real_data_found = True
-                                            zone_price_found = True
-                                            logger.info(f"Found ZONE AVERAGE price via requests from 'Preço médio nesta zona': {average_price_per_sqm:.2f} €/m²")
-                                            break
-                                    except:
-                                        continue
-                                if zone_price_found:
-                                    break
-                            
-                            # If no zone price found, fall back to individual listings
+                            # If no items-average-price found, search by text content
                             if not zone_price_found:
-                                logger.info("Zone average price not found via requests, trying individual listings...")
-                                price_elements = soup.find_all(['span', 'div'], class_=re.compile(r'price|valor'))
-                                prices_found = []
+                                logger.info("items-average-price class not found, searching page text...")
+                                page_text = soup.get_text()
                                 
-                                for elem in price_elements:
-                                    text = elem.get_text()
-                                    price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€/?m²?', text.replace('.', '').replace(',', '.'))
-                                    if price_match:
-                                        price_str = price_match.group(1).replace(',', '.')
+                                # Look for "Preço médio nesta zona" pattern in text
+                                zone_patterns = [
+                                    r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
+                                    r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
+                                    r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                                    r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
+                                ]
+                                
+                                for pattern in zone_patterns:
+                                    zone_match = re.search(pattern, page_text, re.IGNORECASE)
+                                    if zone_match:
+                                        price_str = zone_match.group(1).replace(',', '.')
                                         try:
-                                            price = float(price_str)
-                                            if 1 <= price <= 500:  # Adjusted range for realistic €/m²
-                                                prices_found.append(price)
+                                            zone_price = float(price_str)
+                                            if 0.5 <= zone_price <= 1000:
+                                                average_price_per_sqm = zone_price
+                                                real_data_found = True
+                                                zone_price_found = True
+                                                logger.info(f"✅ REAL SCRAPED PRICE via requests from text pattern: {average_price_per_sqm:.2f} €/m²")
+                                                break
                                         except:
                                             continue
-                                
-                                if prices_found:
-                                    average_price_per_sqm = sum(prices_found) / len(prices_found)
-                                    real_data_found = True
-                                    logger.info(f"Found average price via requests from {len(prices_found)} individual listings: {average_price_per_sqm:.2f} €/m²")
+                                    if zone_price_found:
+                                        break
                     except Exception as e:
                         logger.warning(f"Requests scraping failed: {e}")
                 
