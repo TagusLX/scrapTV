@@ -715,13 +715,17 @@ class IdealistaScraperAPITester:
         return all_tests_passed
 
 def main():
-    print("🚀 Starting Idealista Scraper API Tests - URL Correction Verification")
+    print("🚀 Starting Idealista Scraper API Tests - Detailed Statistics Functionality")
     print("=" * 70)
     
     tester = IdealistaScraperAPITester()
     
-    # Test URL generation patterns (main focus)
-    print("\n🎯 MAIN TEST: URL Generation Pattern Verification")
+    # Test detailed statistics endpoint (main focus)
+    print("\n🎯 MAIN TEST: Detailed Statistics Endpoint Verification")
+    detailed_stats_test_passed = tester.test_detailed_stats_endpoint()
+    
+    # Test URL generation patterns
+    print("\n🔗 Testing URL Generation Pattern Verification")
     url_test_passed = tester.test_url_generation_patterns()
     
     # Test administrative endpoints
@@ -761,6 +765,10 @@ def main():
         tester.test_get_properties()
         tester.test_get_region_stats()
         tester.test_export_php()
+        
+        # Re-test detailed stats with actual data
+        print("\n📊 Re-testing Detailed Stats with Scraped Data...")
+        tester.test_detailed_stats_endpoint()
     
     # Test data management
     print("\n🗑️ Testing Data Management...")
@@ -770,14 +778,15 @@ def main():
     print("\n" + "=" * 70)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
-    # Special focus on URL correction verification
-    print(f"\n🎯 URL CORRECTION VERIFICATION RESULTS:")
+    # Special focus on detailed statistics verification
+    print(f"\n🎯 DETAILED STATISTICS VERIFICATION RESULTS:")
+    print(f"   Detailed Stats Test: {'✅ PASSED' if detailed_stats_test_passed else '❌ FAILED'}")
     print(f"   URL Pattern Test: {'✅ PASSED' if url_test_passed else '❌ FAILED'}")
     print(f"   Administrative Test: {'✅ PASSED' if admin_test_passed else '❌ FAILED'}")
     print(f"   Filtering Test: {'✅ PASSED' if filter_test_passed else '❌ FAILED'}")
     
-    if tester.tests_passed == tester.tests_run and url_test_passed:
-        print("🎉 All tests passed! URL correction verified successfully!")
+    if tester.tests_passed == tester.tests_run and detailed_stats_test_passed:
+        print("🎉 All tests passed! Detailed statistics functionality verified successfully!")
         return 0
     else:
         print("❌ Some tests failed!")
