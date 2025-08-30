@@ -37,6 +37,8 @@ const Dashboard = () => {
   const [selectedOperationType, setSelectedOperationType] = useState("");
   const [selectedPropertyType, setSelectedPropertyType] = useState("");
   const [detailedStats, setDetailedStats] = useState([]);
+  const [detailedCoverage, setDetailedCoverage] = useState(null);
+  const [targetedScrapingLoading, setTargetedScrapingLoading] = useState(false);
 
   const fetchScrapingSessions = async () => {
     try {
