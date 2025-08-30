@@ -676,64 +676,89 @@ class IdealistaScraper:
                         
                         # Look for price information in the property listings
                         try:
-                            # First, try to find the specific "Preço médio nesta zona" section
-                            zone_price_elements = self.driver.find_elements(By.XPATH, 
-                                "//*[contains(text(), 'Preço médio nesta zona') or contains(text(), 'preço médio nesta zona')]")
+                            # Search specifically for the "items-average-price" element
+                            zone_price_elements = self.driver.find_elements(By.CLASS_NAME, "items-average-price")
                             
                             zone_price_found = False
                             for elem in zone_price_elements:
                                 try:
-                                    # Look for the price in the same element or nearby elements
-                                    parent = elem.find_element(By.XPATH, "..")
-                                    price_text = parent.get_attribute('textContent') or parent.text
+                                    price_text = elem.get_attribute('textContent') or elem.text
+                                    logger.info(f"Found items-average-price element: {price_text}")
                                     
-                                    # Also check siblings and children
-                                    siblings = parent.find_elements(By.XPATH, "./*")
-                                    for sibling in siblings:
-                                        sibling_text = sibling.get_attribute('textContent') or sibling.text
-                                        price_text += " " + sibling_text
+                                    # Look for price pattern like "11,05 eur/m²" or "11.05 €/m²"
+                                    price_patterns = [
+                                        r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',  # "11,05 eur/m²"
+                                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',   # "11,05 €/m²"
+                                        r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?' # "11,05 euros/m²"
+                                    ]
                                     
-                                    # Look for price pattern in the combined text
-                                    price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€/?m²?', price_text.replace('.', '').replace(',', '.'))
-                                    if price_match:
-                                        price_str = price_match.group(1).replace(',', '.')
-                                        try:
-                                            zone_price = float(price_str)
-                                            if 1 <= zone_price <= 500:  # Reasonable range for €/m² zone averages
-                                                average_price_per_sqm = zone_price
-                                                real_data_found = True
-                                                zone_price_found = True
-                                                logger.info(f"Found ZONE AVERAGE price from 'Preço médio nesta zona': {average_price_per_sqm:.2f} €/m²")
-                                                break
-                                        except:
-                                            continue
+                                    for pattern in price_patterns:
+                                        price_match = re.search(pattern, price_text, re.IGNORECASE)
+                                        if price_match:
+                                            price_str = price_match.group(1).replace(',', '.')
+                                            try:
+                                                zone_price = float(price_str)
+                                                if 0.5 <= zone_price <= 1000:  # Reasonable range for €/m² zone averages
+                                                    average_price_per_sqm = zone_price
+                                                    real_data_found = True
+                                                    zone_price_found = True
+                                                    logger.info(f"✅ REAL SCRAPED PRICE from items-average-price: {average_price_per_sqm:.2f} €/m²")
+                                                    break
+                                            except:
+                                                continue
+                                    if zone_price_found:
+                                        break
                                 except:
                                     continue
                             
-                            # If no zone price found, fall back to individual listing prices
+                            # If no items-average-price found, try alternative search for "Preço médio nesta zona"
                             if not zone_price_found:
-                                logger.info("Zone average price not found, trying individual listings...")
-                                price_elements = self.driver.find_elements(By.XPATH, 
-                                    "//*[contains(@class, 'item-price') or contains(@class, 'price') or contains(text(), '€/m²')]")
+                                logger.info("items-average-price not found, trying text search for 'Preço médio nesta zona'...")
+                                zone_text_elements = self.driver.find_elements(By.XPATH, 
+                                    "//*[contains(text(), 'Preço médio nesta zona') or contains(text(), 'preço médio nesta zona')]")
                                 
-                                prices_found = []
-                                for elem in price_elements:
-                                    text = elem.get_attribute('textContent') or elem.text
-                                    price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€?/?m²?', text.replace('.', '').replace(',', '.'))
-                                    if price_match:
-                                        price_str = price_match.group(1).replace(',', '.')
-                                        try:
-                                            price = float(price_str)
-                                            if 1 <= price <= 500:  # Reasonable price range for €/m²
-                                                prices_found.append(price)
-                                        except:
-                                            continue
-                                
-                                if prices_found:
-                                    average_price_per_sqm = sum(prices_found) / len(prices_found)
-                                    real_data_found = True
-                                    logger.info(f"Found average price from {len(prices_found)} individual listings: {average_price_per_sqm:.2f} €/m²")
-                                
+                                for elem in zone_text_elements:
+                                    try:
+                                        # Check the element and its parent/siblings for price
+                                        elements_to_check = [elem]
+                                        parent = elem.find_element(By.XPATH, "..")
+                                        elements_to_check.append(parent)
+                                        siblings = parent.find_elements(By.XPATH, "./*")
+                                        elements_to_check.extend(siblings)
+                                        
+                                        for check_elem in elements_to_check:
+                                            price_text = check_elem.get_attribute('textContent') or check_elem.text
+                                            
+                                            # Look for price pattern
+                                            price_patterns = [
+                                                r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
+                                                r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                                                r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?'
+                                            ]
+                                            
+                                            for pattern in price_patterns:
+                                                price_match = re.search(pattern, price_text, re.IGNORECASE)
+                                                if price_match:
+                                                    price_str = price_match.group(1).replace(',', '.')
+                                                    try:
+                                                        zone_price = float(price_str)
+                                                        if 0.5 <= zone_price <= 1000:
+                                                            average_price_per_sqm = zone_price
+                                                            real_data_found = True
+                                                            zone_price_found = True
+                                                            logger.info(f"✅ REAL SCRAPED PRICE from text search: {average_price_per_sqm:.2f} €/m²")
+                                                            break
+                                                    except:
+                                                        continue
+                                            if zone_price_found:
+                                                break
+                                        if zone_price_found:
+                                            break
+                                    except:
+                                        continue
+                                    if zone_price_found:
+                                        break
+                                        
                         except Exception as e:
                             logger.warning(f"Could not extract real average price: {e}")
                             
