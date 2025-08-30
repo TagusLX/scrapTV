@@ -116,6 +116,50 @@ const Dashboard = () => {
     }
   };
 
+  const fetchDetailedCoverage = async () => {
+    try {
+      const response = await axios.get(`${API}/coverage/detailed`);
+      setDetailedCoverage(response.data);
+    } catch (error) {
+      console.error('Error fetching detailed coverage:', error);
+    }
+  };
+
+  const startTargetedScraping = async () => {
+    if (!selectedDistrito) {
+      alert("Veuillez sélectionner au moins un distrito");
+      return;
+    }
+    
+    try {
+      setTargetedScrapingLoading(true);
+      
+      const params = new URLSearchParams();
+      params.append('distrito', selectedDistrito);
+      
+      if (selectedConcelho) {
+        params.append('concelho', selectedConcelho);
+      }
+      if (selectedFreguesia) {
+        params.append('freguesia', selectedFreguesia);
+      }
+      
+      const response = await axios.post(`${API}/scrape/targeted?${params.toString()}`);
+      
+      alert(`✅ ${response.data.message}\nSession ID: ${response.data.session_id}`);
+      
+      // Refresh data
+      fetchScrapingSessions();
+      fetchDetailedCoverage();
+      
+    } catch (error) {
+      console.error('Error starting targeted scraping:', error);
+      alert("❌ Erreur lors du démarrage du scraping ciblé");
+    } finally {
+      setTargetedScrapingLoading(false);
+    }
+  };
+
   const fetchDetailedStats = async () => {
     try {
       // Build query parameters based on current filters
