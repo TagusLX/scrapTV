@@ -492,6 +492,195 @@ class IdealistaScraperAPITester:
             
         return success1 and success2 and success3 and success4 and success5
 
+    def test_targeted_scraping_endpoint(self):
+        """Test the new targeted scraping endpoint with different parameters"""
+        print("\n🎯 Testing Targeted Scraping Endpoint...")
+        
+        all_tests_passed = True
+        
+        # Test 1: Missing distrito (should fail with 400)
+        success1, response1 = self.run_test(
+            "Targeted Scraping (missing distrito)",
+            "POST",
+            "scrape/targeted",
+            400
+        )
+        
+        if success1:
+            print("   ✅ Correctly rejected request without distrito")
+        else:
+            all_tests_passed = False
+        
+        # Test 2: Distrito only (should scrape entire distrito)
+        success2, response2 = self.run_test(
+            "Targeted Scraping (distrito only)",
+            "POST",
+            "scrape/targeted?distrito=faro",
+            200
+        )
+        
+        if success2:
+            print(f"   ✅ Started scraping for distrito: faro")
+            if 'session_id' in response2:
+                print(f"   Session ID: {response2['session_id']}")
+                if 'target' in response2:
+                    target = response2['target']
+                    print(f"   Target: distrito={target.get('distrito')}, concelho={target.get('concelho')}, freguesia={target.get('freguesia')}")
+            if 'message' in response2:
+                print(f"   Message: {response2['message']}")
+        else:
+            all_tests_passed = False
+        
+        # Test 3: Distrito + Concelho (should scrape all freguesias in concelho)
+        success3, response3 = self.run_test(
+            "Targeted Scraping (distrito + concelho)",
+            "POST",
+            "scrape/targeted?distrito=faro&concelho=tavira",
+            200
+        )
+        
+        if success3:
+            print(f"   ✅ Started scraping for distrito + concelho: faro > tavira")
+            if 'target' in response3:
+                target = response3['target']
+                print(f"   Target: distrito={target.get('distrito')}, concelho={target.get('concelho')}, freguesia={target.get('freguesia')}")
+        else:
+            all_tests_passed = False
+        
+        # Test 4: Full hierarchy (distrito + concelho + freguesia)
+        success4, response4 = self.run_test(
+            "Targeted Scraping (full hierarchy)",
+            "POST",
+            "scrape/targeted?distrito=faro&concelho=tavira&freguesia=conceicao-e-cabanas-de-tavira",
+            200
+        )
+        
+        if success4:
+            print(f"   ✅ Started scraping for full hierarchy: faro > tavira > conceicao-e-cabanas-de-tavira")
+            if 'target' in response4:
+                target = response4['target']
+                print(f"   Target: distrito={target.get('distrito')}, concelho={target.get('concelho')}, freguesia={target.get('freguesia')}")
+        else:
+            all_tests_passed = False
+        
+        # Test 5: Invalid distrito (should fail)
+        success5, response5 = self.run_test(
+            "Targeted Scraping (invalid distrito)",
+            "POST",
+            "scrape/targeted?distrito=invalid_distrito",
+            200  # The endpoint returns 200 but the background task will fail
+        )
+        
+        if success5:
+            print(f"   ✅ Accepted request with invalid distrito (will fail in background)")
+            # We can check the session status later to verify it failed
+            if 'session_id' in response5:
+                invalid_session_id = response5['session_id']
+                # Wait a moment for background task to process
+                time.sleep(3)
+                # Check if session failed
+                success_check, response_check = self.run_test(
+                    "Check Invalid Distrito Session Status",
+                    "GET",
+                    f"scraping-sessions/{invalid_session_id}",
+                    200
+                )
+                if success_check and response_check.get('status') == 'failed':
+                    print(f"   ✅ Session correctly failed for invalid distrito")
+                    if 'error_message' in response_check:
+                        print(f"   Error message: {response_check['error_message']}")
+                else:
+                    print(f"   ⚠️ Session status: {response_check.get('status', 'unknown')}")
+        else:
+            all_tests_passed = False
+        
+        return all_tests_passed
+
+    def test_detailed_coverage_endpoint(self):
+        """Test the new detailed coverage endpoint"""
+        print("\n📊 Testing Detailed Coverage Endpoint...")
+        
+        all_tests_passed = True
+        
+        # Test the detailed coverage endpoint
+        success, response = self.run_test(
+            "Detailed Coverage Statistics",
+            "GET",
+            "coverage/detailed",
+            200
+        )
+        
+        if success and response:
+            print(f"   ✅ Retrieved detailed coverage statistics")
+            
+            # Verify response structure - overview
+            if 'overview' in response:
+                overview = response['overview']
+                required_overview_fields = ['total_distritos', 'scraped_distritos', 'total_concelhos', 'total_freguesias', 'scraped_locations']
+                
+                for field in required_overview_fields:
+                    if field in overview:
+                        print(f"   ✅ Overview field '{field}': {overview[field]}")
+                    else:
+                        print(f"   ❌ Missing overview field: {field}")
+                        all_tests_passed = False
+                
+                # Check calculated fields
+                if 'scraped_concelhos' in overview:
+                    print(f"   ✅ Overview scraped_concelhos: {overview['scraped_concelhos']}")
+                if 'scraped_freguesias' in overview:
+                    print(f"   ✅ Overview scraped_freguesias: {overview['scraped_freguesias']}")
+            else:
+                print(f"   ❌ Missing overview section")
+                all_tests_passed = False
+            
+            # Verify response structure - by_distrito
+            if 'by_distrito' in response:
+                by_distrito = response['by_distrito']
+                print(f"   ✅ Found {len(by_distrito)} distritos in coverage report")
+                
+                if by_distrito:
+                    # Check first distrito structure
+                    sample_distrito = by_distrito[0]
+                    required_distrito_fields = ['distrito', 'distrito_display', 'total_concelhos', 'total_freguesias', 'scraped', 'concelhos', 'scraped_concelhos', 'scraped_freguesias', 'concelho_coverage_percentage', 'freguesia_coverage_percentage']
+                    
+                    for field in required_distrito_fields:
+                        if field in sample_distrito:
+                            print(f"   ✅ Distrito field '{field}': {sample_distrito[field]}")
+                        else:
+                            print(f"   ❌ Missing distrito field: {field}")
+                            all_tests_passed = False
+                    
+                    # Check concelho structure
+                    if 'concelhos' in sample_distrito and sample_distrito['concelhos']:
+                        sample_concelho = sample_distrito['concelhos'][0]
+                        required_concelho_fields = ['concelho', 'concelho_display', 'total_freguesias', 'scraped_freguesias', 'scraped', 'coverage_percentage', 'missing_freguesias']
+                        
+                        for field in required_concelho_fields:
+                            if field in sample_concelho:
+                                print(f"   ✅ Concelho field '{field}': {sample_concelho[field]}")
+                            else:
+                                print(f"   ❌ Missing concelho field: {field}")
+                                all_tests_passed = False
+                    
+                    # Verify administrative display formatting
+                    distrito_display = sample_distrito.get('distrito_display', '')
+                    if distrito_display and distrito_display != sample_distrito.get('distrito', ''):
+                        print(f"   ✅ Administrative display formatting: '{sample_distrito.get('distrito')}' -> '{distrito_display}'")
+                    
+                    # Check coverage percentage calculations
+                    if sample_distrito.get('concelho_coverage_percentage') is not None:
+                        print(f"   ✅ Concelho coverage percentage: {sample_distrito['concelho_coverage_percentage']:.1f}%")
+                    if sample_distrito.get('freguesia_coverage_percentage') is not None:
+                        print(f"   ✅ Freguesia coverage percentage: {sample_distrito['freguesia_coverage_percentage']:.1f}%")
+            else:
+                print(f"   ❌ Missing by_distrito section")
+                all_tests_passed = False
+        else:
+            all_tests_passed = False
+        
+        return all_tests_passed
+
     def test_detailed_stats_endpoint(self):
         """Test the new detailed statistics endpoint with various filter combinations"""
         print("\n📊 Testing Detailed Statistics Endpoint...")
