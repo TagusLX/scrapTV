@@ -490,6 +490,230 @@ class IdealistaScraperAPITester:
             
         return success1 and success2 and success3 and success4 and success5
 
+    def test_detailed_stats_endpoint(self):
+        """Test the new detailed statistics endpoint with various filter combinations"""
+        print("\n📊 Testing Detailed Statistics Endpoint...")
+        
+        all_tests_passed = True
+        
+        # Test 1: No filters (should return all detailed stats)
+        success1, response1 = self.run_test(
+            "Detailed Stats (no filters)",
+            "GET",
+            "stats/detailed",
+            200
+        )
+        
+        if success1:
+            print(f"   Total detailed stats (no filter): {len(response1)}")
+            if response1:
+                # Verify response structure
+                sample_stat = response1[0]
+                required_fields = ['region', 'location', 'display_info', 'detailed_stats', 'total_properties']
+                backward_compat_fields = ['avg_sale_price_per_sqm', 'avg_rent_price_per_sqm']
+                
+                for field in required_fields:
+                    if field not in sample_stat:
+                        print(f"   ❌ Missing required field: {field}")
+                        all_tests_passed = False
+                    else:
+                        print(f"   ✅ Found required field: {field}")
+                
+                # Check detailed_stats structure
+                if 'detailed_stats' in sample_stat and sample_stat['detailed_stats']:
+                    detailed_stat = sample_stat['detailed_stats'][0]
+                    detailed_required_fields = ['property_type', 'operation_type', 'avg_price_per_sqm', 'count']
+                    
+                    for field in detailed_required_fields:
+                        if field not in detailed_stat:
+                            print(f"   ❌ Missing detailed stat field: {field}")
+                            all_tests_passed = False
+                        else:
+                            print(f"   ✅ Found detailed stat field: {field}")
+                
+                # Check display_info structure
+                if 'display_info' in sample_stat and sample_stat['display_info']:
+                    display_info = sample_stat['display_info']
+                    if 'full_display' in display_info:
+                        print(f"   ✅ Found hierarchical display: {display_info['full_display']}")
+                    else:
+                        print(f"   ❌ Missing hierarchical display format")
+                        all_tests_passed = False
+        else:
+            all_tests_passed = False
+        
+        # Test 2: Filter by distrito only
+        success2, response2 = self.run_test(
+            "Detailed Stats (distrito=faro)",
+            "GET",
+            "stats/detailed?distrito=faro",
+            200
+        )
+        
+        if success2:
+            print(f"   Faro detailed stats: {len(response2)}")
+            # Verify all results are from Faro
+            if response2:
+                for stat in response2:
+                    if stat['region'] != 'faro':
+                        print(f"   ❌ Found non-Faro result: {stat['region']}")
+                        all_tests_passed = False
+                        break
+                else:
+                    print(f"   ✅ All results are from Faro district")
+        else:
+            all_tests_passed = False
+        
+        # Test 3: Filter by operation_type (sale)
+        success3, response3 = self.run_test(
+            "Detailed Stats (operation_type=sale)",
+            "GET",
+            "stats/detailed?operation_type=sale",
+            200
+        )
+        
+        if success3:
+            print(f"   Sale operation detailed stats: {len(response3)}")
+            # Verify all detailed_stats are for sales
+            if response3:
+                for stat in response3:
+                    for detailed_stat in stat['detailed_stats']:
+                        if detailed_stat['operation_type'] != 'sale':
+                            print(f"   ❌ Found non-sale operation: {detailed_stat['operation_type']}")
+                            all_tests_passed = False
+                            break
+                    if not all_tests_passed:
+                        break
+                else:
+                    print(f"   ✅ All detailed stats are for sale operations")
+        else:
+            all_tests_passed = False
+        
+        # Test 4: Filter by property_type (apartment)
+        success4, response4 = self.run_test(
+            "Detailed Stats (property_type=apartment)",
+            "GET",
+            "stats/detailed?property_type=apartment",
+            200
+        )
+        
+        if success4:
+            print(f"   Apartment property detailed stats: {len(response4)}")
+            # Verify all detailed_stats are for apartments
+            if response4:
+                for stat in response4:
+                    for detailed_stat in stat['detailed_stats']:
+                        if detailed_stat['property_type'] != 'apartment':
+                            print(f"   ❌ Found non-apartment property: {detailed_stat['property_type']}")
+                            all_tests_passed = False
+                            break
+                    if not all_tests_passed:
+                        break
+                else:
+                    print(f"   ✅ All detailed stats are for apartment properties")
+        else:
+            all_tests_passed = False
+        
+        # Test 5: Combined filters (distrito + operation_type)
+        success5, response5 = self.run_test(
+            "Detailed Stats (distrito=faro&operation_type=rent)",
+            "GET",
+            "stats/detailed?distrito=faro&operation_type=rent",
+            200
+        )
+        
+        if success5:
+            print(f"   Faro rent detailed stats: {len(response5)}")
+            # Verify results match both filters
+            if response5:
+                for stat in response5:
+                    if stat['region'] != 'faro':
+                        print(f"   ❌ Found non-Faro result: {stat['region']}")
+                        all_tests_passed = False
+                        break
+                    for detailed_stat in stat['detailed_stats']:
+                        if detailed_stat['operation_type'] != 'rent':
+                            print(f"   ❌ Found non-rent operation: {detailed_stat['operation_type']}")
+                            all_tests_passed = False
+                            break
+                    if not all_tests_passed:
+                        break
+                else:
+                    print(f"   ✅ All results match combined filters (Faro + rent)")
+        else:
+            all_tests_passed = False
+        
+        # Test 6: Test data structure grouping
+        success6, response6 = self.run_test(
+            "Detailed Stats (data structure verification)",
+            "GET",
+            "stats/detailed?distrito=faro&limit=5",
+            200
+        )
+        
+        if success6 and response6:
+            print(f"   Verifying data structure grouping...")
+            
+            # Check if data is properly grouped by property_type and operation_type
+            property_types_found = set()
+            operation_types_found = set()
+            
+            for stat in response6:
+                for detailed_stat in stat['detailed_stats']:
+                    property_types_found.add(detailed_stat['property_type'])
+                    operation_types_found.add(detailed_stat['operation_type'])
+            
+            print(f"   ✅ Property types found: {sorted(property_types_found)}")
+            print(f"   ✅ Operation types found: {sorted(operation_types_found)}")
+            
+            # Verify avg_price_per_sqm calculations exist
+            for stat in response6:
+                for detailed_stat in stat['detailed_stats']:
+                    if detailed_stat['avg_price_per_sqm'] is not None and detailed_stat['avg_price_per_sqm'] > 0:
+                        print(f"   ✅ Found valid avg_price_per_sqm: {detailed_stat['avg_price_per_sqm']:.2f} €/m²")
+                        break
+                else:
+                    continue
+                break
+            
+            # Verify count information
+            for stat in response6:
+                for detailed_stat in stat['detailed_stats']:
+                    if detailed_stat['count'] > 0:
+                        print(f"   ✅ Found property count: {detailed_stat['count']} properties")
+                        break
+                else:
+                    continue
+                break
+        else:
+            all_tests_passed = False
+        
+        # Test 7: Backward compatibility verification
+        success7, response7 = self.run_test(
+            "Detailed Stats (backward compatibility check)",
+            "GET",
+            "stats/detailed?distrito=faro",
+            200
+        )
+        
+        if success7 and response7:
+            print(f"   Verifying backward compatibility...")
+            
+            for stat in response7:
+                # Check if general avg_sale_price_per_sqm and avg_rent_price_per_sqm exist
+                if stat.get('avg_sale_price_per_sqm') is not None:
+                    print(f"   ✅ Found backward compatible avg_sale_price_per_sqm: {stat['avg_sale_price_per_sqm']:.2f} €/m²")
+                    break
+            
+            for stat in response7:
+                if stat.get('avg_rent_price_per_sqm') is not None:
+                    print(f"   ✅ Found backward compatible avg_rent_price_per_sqm: {stat['avg_rent_price_per_sqm']:.2f} €/m²")
+                    break
+        else:
+            all_tests_passed = False
+        
+        return all_tests_passed
+
 def main():
     print("🚀 Starting Idealista Scraper API Tests - URL Correction Verification")
     print("=" * 70)
