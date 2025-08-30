@@ -1147,7 +1147,7 @@ async def get_detailed_coverage():
     
     return detailed_coverage
 
-@api_router.get("/scrape/start")
+@api_router.post("/scrape/start")
 async def start_scraping(background_tasks: BackgroundTasks):
     """Start a new scraping session"""
     session = ScrapingSession(status="running")
