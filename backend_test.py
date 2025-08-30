@@ -1466,13 +1466,17 @@ class IdealistaScraperAPITester:
         return all_tests_passed
 
 def main():
-    print("🚀 Starting Idealista Scraper API Tests - Property Type Categorization & Rural Plot Testing")
+    print("🚀 Starting Idealista Scraper API Tests - Enhanced Error Handling & Retry Functionality")
     print("=" * 80)
     
     tester = IdealistaScraperAPITester()
     
-    # Test NEW property type categorization and rural plot functionality (MAIN FOCUS)
-    print("\n🏠 MAIN TEST: Property Type Categorization & Rural Plot Functionality")
+    # Test NEW enhanced error handling and retry functionality (MAIN FOCUS)
+    print("\n🔧 MAIN TEST: Enhanced Error Handling & Retry Functionality")
+    enhanced_error_test_passed = tester.test_enhanced_error_handling_and_retry()
+    
+    # Test NEW property type categorization and rural plot functionality
+    print("\n🏠 Testing Property Type Categorization & Rural Plot Functionality")
     property_type_test_passed = tester.test_property_type_categorization()
     
     # Test detailed statistics endpoint with new property types
