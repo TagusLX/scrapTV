@@ -93,6 +93,31 @@ const Dashboard = () => {
     }
   };
 
+  const fetchSessionDetails = async (sessionId) => {
+    try {
+      const response = await axios.get(`${API}/scraping-sessions/${sessionId}`);
+      console.log('Session details:', response.data);
+      // You can add a modal or detailed view here
+      alert(`Session ${sessionId.slice(0, 8)} details logged to console`);
+    } catch (error) {
+      console.error('Error fetching session details:', error);
+      alert('Erreur lors de la récupération des détails de session');
+    }
+  };
+
+  const retryFailedZones = async (sessionId) => {
+    try {
+      const response = await axios.post(`${API}/scraping-sessions/${sessionId}/retry-failed`);
+      alert(`✅ ${response.data.message}\nNouvelle session ID: ${response.data.session_id}`);
+      
+      // Refresh sessions
+      fetchScrapingSessions();
+    } catch (error) {
+      console.error('Error retrying failed zones:', error);
+      alert('❌ Erreur lors du retry des zones échouées');
+    }
+  };
+
   const fetchProperties = async () => {
     try {
       // Build query parameters based on current filters
