@@ -1203,6 +1203,114 @@ function tagus_value_get_market_data() {
             )}
           </TabsContent>
 
+          <TabsContent value="coverage">
+            <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle>Couverture de Scraping Détaillée</CardTitle>
+                <CardDescription>Niveau de scraping par distrito, concelho et freguesia</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {detailedCoverage && (
+                  <div className="space-y-6">
+                    {/* Overview Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-green-700">
+                          {detailedCoverage.overview.scraped_distritos}/{detailedCoverage.overview.total_distritos}
+                        </p>
+                        <p className="text-sm text-gray-600">Distritos</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-blue-700">
+                          {detailedCoverage.overview.scraped_concelhos}/{detailedCoverage.overview.total_concelhos}
+                        </p>
+                        <p className="text-sm text-gray-600">Concelhos</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-purple-700">
+                          {detailedCoverage.overview.scraped_freguesias}/{detailedCoverage.overview.total_freguesias}
+                        </p>
+                        <p className="text-sm text-gray-600">Freguesias</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-orange-700">
+                          {detailedCoverage.overview.scraped_locations}
+                        </p>
+                        <p className="text-sm text-gray-600">Zones Scrapées</p>
+                      </div>
+                    </div>
+
+                    {/* Districts Breakdown */}
+                    <div className="space-y-4">
+                      {detailedCoverage.by_distrito.map((distrito, index) => (
+                        <div key={index} className="border rounded-lg bg-white/50">
+                          <div className="p-4 border-b bg-gray-50 rounded-t-lg">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold text-lg flex items-center gap-2">
+                                {distrito.scraped ? (
+                                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                                ) : (
+                                  <span className="w-3 h-3 bg-gray-300 rounded-full"></span>
+                                )}
+                                {distrito.distrito_display}
+                              </h3>
+                              <div className="flex gap-4 text-sm">
+                                <span className="bg-blue-100 px-2 py-1 rounded">
+                                  Concelhos: {distrito.scraped_concelhos}/{distrito.total_concelhos} 
+                                  ({distrito.concelho_coverage_percentage.toFixed(1)}%)
+                                </span>
+                                <span className="bg-purple-100 px-2 py-1 rounded">
+                                  Freguesias: {distrito.scraped_freguesias}/{distrito.total_freguesias}
+                                  ({distrito.freguesia_coverage_percentage.toFixed(1)}%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Concelhos in this distrito */}
+                          <div className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {distrito.concelhos.map((concelho, cIndex) => (
+                                <div key={cIndex} className={`p-3 rounded-lg border-l-4 ${
+                                  concelho.scraped 
+                                    ? 'bg-green-50 border-green-400' 
+                                    : 'bg-gray-50 border-gray-300'
+                                }`}>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-medium text-sm">{concelho.concelho_display}</h4>
+                                    {concelho.scraped ? (
+                                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                        ✓ Scrapé
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                        Non scrapé
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    <p>Freguesias: {concelho.scraped_freguesias}/{concelho.total_freguesias}</p>
+                                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                      <div 
+                                        className="bg-blue-600 h-2 rounded-full" 
+                                        style={{ width: `${concelho.coverage_percentage}%` }}
+                                      ></div>
+                                    </div>
+                                    <p className="mt-1">{concelho.coverage_percentage.toFixed(1)}% couvert</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="sessions">
             <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
               <CardHeader>
