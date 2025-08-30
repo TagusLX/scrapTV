@@ -427,7 +427,9 @@ class IdealistaScraperAPITester:
                         return True
                     else:
                         print(f"   ⚠️ Target freguesia not found, available freguesias:")
-                        for f in response3[:5]:  # Show first 5
+                        for i, f in enumerate(response3):
+                            if i >= 5:  # Show first 5
+                                break
                             print(f"      - {f}")
                         return True  # Still pass as the endpoint works
                         
