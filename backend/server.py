@@ -676,27 +676,63 @@ class IdealistaScraper:
                         
                         # Look for price information in the property listings
                         try:
-                            # Try to find price elements from property listings
-                            price_elements = self.driver.find_elements(By.XPATH, 
-                                "//*[contains(@class, 'item-price') or contains(@class, 'price') or contains(text(), '€/m²')]")
+                            # First, try to find the specific "Preço médio nesta zona" section
+                            zone_price_elements = self.driver.find_elements(By.XPATH, 
+                                "//*[contains(text(), 'Preço médio nesta zona') or contains(text(), 'preço médio nesta zona')]")
                             
-                            prices_found = []
-                            for elem in price_elements:
-                                text = elem.get_attribute('textContent') or elem.text
-                                price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€?/?m²?', text.replace('.', '').replace(',', '.'))
-                                if price_match:
-                                    price_str = price_match.group(1).replace(',', '.')
-                                    try:
-                                        price = float(price_str)
-                                        if 100 <= price <= 50000:  # Reasonable price range for €/m²
-                                            prices_found.append(price)
-                                    except:
-                                        continue
+                            zone_price_found = False
+                            for elem in zone_price_elements:
+                                try:
+                                    # Look for the price in the same element or nearby elements
+                                    parent = elem.find_element(By.XPATH, "..")
+                                    price_text = parent.get_attribute('textContent') or parent.text
+                                    
+                                    # Also check siblings and children
+                                    siblings = parent.find_elements(By.XPATH, "./*")
+                                    for sibling in siblings:
+                                        sibling_text = sibling.get_attribute('textContent') or sibling.text
+                                        price_text += " " + sibling_text
+                                    
+                                    # Look for price pattern in the combined text
+                                    price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€/?m²?', price_text.replace('.', '').replace(',', '.'))
+                                    if price_match:
+                                        price_str = price_match.group(1).replace(',', '.')
+                                        try:
+                                            zone_price = float(price_str)
+                                            if 1 <= zone_price <= 500:  # Reasonable range for €/m² zone averages
+                                                average_price_per_sqm = zone_price
+                                                real_data_found = True
+                                                zone_price_found = True
+                                                logger.info(f"Found ZONE AVERAGE price from 'Preço médio nesta zona': {average_price_per_sqm:.2f} €/m²")
+                                                break
+                                        except:
+                                            continue
+                                except:
+                                    continue
                             
-                            if prices_found:
-                                average_price_per_sqm = sum(prices_found) / len(prices_found)
-                                real_data_found = True
-                                logger.info(f"Found real average price from {len(prices_found)} listings: {average_price_per_sqm:.2f} €/m²")
+                            # If no zone price found, fall back to individual listing prices
+                            if not zone_price_found:
+                                logger.info("Zone average price not found, trying individual listings...")
+                                price_elements = self.driver.find_elements(By.XPATH, 
+                                    "//*[contains(@class, 'item-price') or contains(@class, 'price') or contains(text(), '€/m²')]")
+                                
+                                prices_found = []
+                                for elem in price_elements:
+                                    text = elem.get_attribute('textContent') or elem.text
+                                    price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€?/?m²?', text.replace('.', '').replace(',', '.'))
+                                    if price_match:
+                                        price_str = price_match.group(1).replace(',', '.')
+                                        try:
+                                            price = float(price_str)
+                                            if 1 <= price <= 500:  # Reasonable price range for €/m²
+                                                prices_found.append(price)
+                                        except:
+                                            continue
+                                
+                                if prices_found:
+                                    average_price_per_sqm = sum(prices_found) / len(prices_found)
+                                    real_data_found = True
+                                    logger.info(f"Found average price from {len(prices_found)} individual listings: {average_price_per_sqm:.2f} €/m²")
                                 
                         except Exception as e:
                             logger.warning(f"Could not extract real average price: {e}")
