@@ -1745,13 +1745,163 @@ async def get_scraping_sessions():
     sessions = await db.scraping_sessions.find().sort("started_at", -1).to_list(100)
     return [ScrapingSession(**session) for session in sessions]
 
-@api_router.get("/scraping-sessions/{session_id}", response_model=ScrapingSession)
+@api_router.get("/scraping-sessions/{session_id}")
 async def get_scraping_session(session_id: str):
-    """Get specific scraping session"""
+    """Get detailed information about a scraping session including errors"""
     session = await db.scraping_sessions.find_one({"id": session_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    return ScrapingSession(**session)
+    
+    return session
+
+@api_router.get("/scraping-sessions/{session_id}/errors")
+async def get_scraping_errors(session_id: str):
+    """Get detailed error information for a scraping session"""
+    session = await db.scraping_sessions.find_one({"id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    failed_zones = session.get('failed_zones', [])
+    success_zones = session.get('success_zones', [])
+    
+    # Process error statistics
+    error_summary = {
+        'total_zones_attempted': len(failed_zones) + len(success_zones),
+        'failed_zones_count': len(failed_zones),
+        'success_zones_count': len(success_zones),
+        'failure_rate': len(failed_zones) / (len(failed_zones) + len(success_zones)) * 100 if (failed_zones or success_zones) else 0,
+        'common_errors': {},
+        'failed_zones': failed_zones,
+        'success_zones': success_zones
+    }
+    
+    # Count common error types
+    for zone_error in failed_zones:
+        for error in zone_error.get('errors', []):
+            error_msg = error.get('error', 'Unknown error')
+            if error_msg in error_summary['common_errors']:
+                error_summary['common_errors'][error_msg] += 1
+            else:
+                error_summary['common_errors'][error_msg] = 1
+    
+    return error_summary
+
+@api_router.post("/scrape/retry-failed")
+async def retry_failed_zones(
+    background_tasks: BackgroundTasks,
+    session_id: str,
+    zones: Optional[List[str]] = None  # Specific zones to retry, or all if None
+):
+    """Retry scraping for failed zones from a previous session"""
+    
+    # Get the original session
+    original_session = await db.scraping_sessions.find_one({"id": session_id})
+    if not original_session:
+        raise HTTPException(status_code=404, detail="Original session not found")
+    
+    failed_zones = original_session.get('failed_zones', [])
+    if not failed_zones:
+        raise HTTPException(status_code=400, detail="No failed zones found in session")
+    
+    # Create new retry session
+    retry_session = ScrapingSession(status="running")
+    retry_session_dict = retry_session.dict()
+    await db.scraping_sessions.insert_one(retry_session_dict)
+    
+    # Filter zones to retry
+    zones_to_retry = []
+    if zones:
+        # Retry specific zones
+        for zone_error in failed_zones:
+            if zone_error['zone'] in zones:
+                zones_to_retry.append(zone_error)
+    else:
+        # Retry all failed zones
+        zones_to_retry = failed_zones
+    
+    # Start retry background task
+    background_tasks.add_task(run_retry_scraping_task, retry_session.id, zones_to_retry)
+    
+    return {
+        "message": f"Retry scraping started for {len(zones_to_retry)} failed zones",
+        "retry_session_id": retry_session.id,
+        "original_session_id": session_id,
+        "zones_to_retry": [z['zone'] for z in zones_to_retry]
+    }
+
+async def run_retry_scraping_task(session_id: str, zones_to_retry: List[dict]):
+    """Background task for retrying failed scraping zones"""
+    try:
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {"status": "running"}}
+        )
+        
+        total_properties = 0
+        regions_scraped = []
+        
+        # Initialize scraper with session ID
+        scraper.session_id = session_id
+        
+        logger.info(f"Starting retry scraping for {len(zones_to_retry)} zones...")
+        
+        for zone_info in zones_to_retry:
+            zone_parts = zone_info['zone'].split('/')
+            if len(zone_parts) != 3:
+                logger.error(f"Invalid zone format: {zone_info['zone']}")
+                continue
+                
+            distrito, concelho, freguesia = zone_parts
+            operation_type = zone_info.get('operation_type', 'sale')
+            
+            try:
+                logger.info(f"Retrying: {distrito}/{concelho}/{freguesia} ({operation_type})")
+                
+                # Scrape the zone
+                properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, operation_type, session_id=session_id)
+                
+                # Save properties to database
+                for prop_data in properties:
+                    property_obj = Property(**prop_data)
+                    await db.properties.insert_one(property_obj.dict())
+                    total_properties += 1
+                
+                regions_scraped.append(zone_info['zone'])
+                
+                # Delay between zones
+                await asyncio.sleep(2)
+                
+            except Exception as e:
+                logger.error(f"Error retrying zone {zone_info['zone']}: {e}")
+                continue
+        
+        # Clean up driver
+        scraper.close_driver()
+        
+        # Update session as completed
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc),
+                "total_properties": total_properties,
+                "regions_scraped": regions_scraped
+            }}
+        )
+        
+        logger.info(f"Retry scraping completed: {total_properties} properties from {len(regions_scraped)} zones")
+        
+    except Exception as e:
+        logger.error(f"Retry scraping failed: {e}")
+        scraper.close_driver()
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc),
+                "error_message": str(e)
+            }}
+        )
 
 @api_router.get("/properties", response_model=List[Property])
 async def get_properties(
