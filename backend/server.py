@@ -90,6 +90,9 @@ class ScrapingSession(BaseModel):
     error_message: Optional[str] = None
     captcha_image_path: Optional[str] = None
     current_url: Optional[str] = None
+    # New fields for detailed error tracking
+    failed_zones: List[dict] = []  # List of failed zones with error details
+    success_zones: List[dict] = []  # List of successful zones with data count
 
 class CaptchaSolution(BaseModel):
     solution: str
