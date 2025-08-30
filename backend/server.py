@@ -754,26 +754,56 @@ class IdealistaScraper:
                             # Look for price information in the HTML
                             soup = BeautifulSoup(response.content, 'html.parser')
                             
-                            # Look for price elements in property listings
-                            price_elements = soup.find_all(['span', 'div'], class_=re.compile(r'price|valor'))
-                            prices_found = []
+                            # First, search for the specific "Preço médio nesta zona" text
+                            zone_price_found = False
+                            page_text = soup.get_text()
                             
-                            for elem in price_elements:
-                                text = elem.get_text()
-                                price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€/?m²?', text.replace('.', '').replace(',', '.'))
-                                if price_match:
-                                    price_str = price_match.group(1).replace(',', '.')
+                            # Look for "Preço médio nesta zona" pattern
+                            zone_patterns = [
+                                r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                                r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                                r'médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
+                            ]
+                            
+                            for pattern in zone_patterns:
+                                zone_match = re.search(pattern, page_text, re.IGNORECASE)
+                                if zone_match:
+                                    price_str = zone_match.group(1).replace(',', '.')
                                     try:
-                                        price = float(price_str)
-                                        if 100 <= price <= 50000:  # Reasonable price range
-                                            prices_found.append(price)
+                                        zone_price = float(price_str)
+                                        if 1 <= zone_price <= 500:  # Reasonable range for zone averages
+                                            average_price_per_sqm = zone_price
+                                            real_data_found = True
+                                            zone_price_found = True
+                                            logger.info(f"Found ZONE AVERAGE price via requests from 'Preço médio nesta zona': {average_price_per_sqm:.2f} €/m²")
+                                            break
                                     except:
                                         continue
+                                if zone_price_found:
+                                    break
                             
-                            if prices_found:
-                                average_price_per_sqm = sum(prices_found) / len(prices_found)
-                                real_data_found = True
-                                logger.info(f"Found real average price via requests from {len(prices_found)} listings: {average_price_per_sqm:.2f} €/m²")
+                            # If no zone price found, fall back to individual listings
+                            if not zone_price_found:
+                                logger.info("Zone average price not found via requests, trying individual listings...")
+                                price_elements = soup.find_all(['span', 'div'], class_=re.compile(r'price|valor'))
+                                prices_found = []
+                                
+                                for elem in price_elements:
+                                    text = elem.get_text()
+                                    price_match = re.search(r'(\d+(?:[.,]\d+)?)\s*€/?m²?', text.replace('.', '').replace(',', '.'))
+                                    if price_match:
+                                        price_str = price_match.group(1).replace(',', '.')
+                                        try:
+                                            price = float(price_str)
+                                            if 1 <= price <= 500:  # Adjusted range for realistic €/m²
+                                                prices_found.append(price)
+                                        except:
+                                            continue
+                                
+                                if prices_found:
+                                    average_price_per_sqm = sum(prices_found) / len(prices_found)
+                                    real_data_found = True
+                                    logger.info(f"Found average price via requests from {len(prices_found)} individual listings: {average_price_per_sqm:.2f} €/m²")
                     except Exception as e:
                         logger.warning(f"Requests scraping failed: {e}")
                 
