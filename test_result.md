@@ -186,8 +186,8 @@ The user requested enhancements to an existing real estate data scraping applica
 
 ## test_plan:
   current_focus:
-    - "Targeted Scraping API Endpoint"
-    - "Detailed Coverage API Endpoint"
+    - "Property Type Categorization and Rural Plot Functionality"
+    - "Improved Scraping Method with Specific Property Types"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
