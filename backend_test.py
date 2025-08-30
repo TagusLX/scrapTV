@@ -906,13 +906,21 @@ class IdealistaScraperAPITester:
         return all_tests_passed
 
 def main():
-    print("🚀 Starting Idealista Scraper API Tests - Detailed Statistics Functionality")
+    print("🚀 Starting Idealista Scraper API Tests - Targeted Scraping & Detailed Coverage")
     print("=" * 70)
     
     tester = IdealistaScraperAPITester()
     
-    # Test detailed statistics endpoint (main focus)
-    print("\n🎯 MAIN TEST: Detailed Statistics Endpoint Verification")
+    # Test NEW targeted scraping endpoint (main focus)
+    print("\n🎯 MAIN TEST: Targeted Scraping Endpoint Verification")
+    targeted_scraping_test_passed = tester.test_targeted_scraping_endpoint()
+    
+    # Test NEW detailed coverage endpoint (main focus)
+    print("\n📊 MAIN TEST: Detailed Coverage Endpoint Verification")
+    detailed_coverage_test_passed = tester.test_detailed_coverage_endpoint()
+    
+    # Test detailed statistics endpoint
+    print("\n📈 Testing Detailed Statistics Endpoint")
     detailed_stats_test_passed = tester.test_detailed_stats_endpoint()
     
     # Test URL generation patterns
@@ -957,6 +965,10 @@ def main():
         tester.test_get_region_stats()
         tester.test_export_php()
         
+        # Re-test detailed coverage with actual data
+        print("\n📊 Re-testing Detailed Coverage with Scraped Data...")
+        tester.test_detailed_coverage_endpoint()
+        
         # Re-test detailed stats with actual data
         print("\n📊 Re-testing Detailed Stats with Scraped Data...")
         tester.test_detailed_stats_endpoint()
@@ -969,15 +981,20 @@ def main():
     print("\n" + "=" * 70)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
-    # Special focus on detailed statistics verification
-    print(f"\n🎯 DETAILED STATISTICS VERIFICATION RESULTS:")
+    # Special focus on new functionality verification
+    print(f"\n🎯 NEW FUNCTIONALITY VERIFICATION RESULTS:")
+    print(f"   Targeted Scraping Test: {'✅ PASSED' if targeted_scraping_test_passed else '❌ FAILED'}")
+    print(f"   Detailed Coverage Test: {'✅ PASSED' if detailed_coverage_test_passed else '❌ FAILED'}")
     print(f"   Detailed Stats Test: {'✅ PASSED' if detailed_stats_test_passed else '❌ FAILED'}")
     print(f"   URL Pattern Test: {'✅ PASSED' if url_test_passed else '❌ FAILED'}")
     print(f"   Administrative Test: {'✅ PASSED' if admin_test_passed else '❌ FAILED'}")
     print(f"   Filtering Test: {'✅ PASSED' if filter_test_passed else '❌ FAILED'}")
     
-    if tester.tests_passed == tester.tests_run and detailed_stats_test_passed:
-        print("🎉 All tests passed! Detailed statistics functionality verified successfully!")
+    # Check if main new features passed
+    new_features_passed = targeted_scraping_test_passed and detailed_coverage_test_passed
+    
+    if tester.tests_passed == tester.tests_run and new_features_passed:
+        print("🎉 All tests passed! New targeted scraping and detailed coverage functionality verified successfully!")
         return 0
     else:
         print("❌ Some tests failed!")
