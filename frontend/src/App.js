@@ -845,7 +845,114 @@ function tagus_value_get_market_data() {
               </Card>
             </div>
 
-            {regionStats.length > 0 && (
+            {/* Detailed Regional Overview */}
+            {detailedStats.length > 0 && (
+              <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Aperçu Détaillé par Type de Bien</CardTitle>
+                  <CardDescription>Prix détaillés par type de propriété et opération</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {detailedStats.slice(0, 6).map((stat, index) => {
+                      const saleURL = generateIdealistaURL(stat.region, stat.location, 'sale');
+                      const rentURL = generateIdealistaURL(stat.region, stat.location, 'rent');
+                      const propertyURLs = generatePropertyTypeURLs(stat.region, stat.location);
+                      
+                      // Group detailed stats by property type and operation
+                      const groupedStats = {};
+                      stat.detailed_stats.forEach(detail => {
+                        const key = detail.property_type;
+                        if (!groupedStats[key]) {
+                          groupedStats[key] = { sale: null, rent: null };
+                        }
+                        groupedStats[key][detail.operation_type] = detail;
+                      });
+                      
+                      return (
+                        <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 mb-4">
+                            {stat.display_info ? stat.display_info.full_display : `${stat.region} - ${stat.location}`}
+                          </h4>
+                          
+                          <div className="space-y-4 text-sm">
+                            {/* Property Type Breakdown */}
+                            {Object.entries(groupedStats).map(([propType, operations]) => {
+                              const typeNames = {
+                                'apartment': '🏢 Appartements',
+                                'house': '🏠 Maisons',
+                                'plot': '📐 Terrains'
+                              };
+                              const typeName = typeNames[propType] || propType;
+                              
+                              return (
+                                <div key={propType} className="border-l-4 border-blue-300 pl-3">
+                                  <h5 className="font-medium text-gray-800 mb-2">{typeName}</h5>
+                                  <div className="grid grid-cols-2 gap-3 text-xs">
+                                    {/* Sale */}
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-blue-700 font-medium">
+                                          Vente: {operations.sale?.avg_price_per_sqm ? `${operations.sale.avg_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}
+                                        </span>
+                                        {propertyURLs.sale?.[propType === 'plot' ? 'urbanLand' : propType + 's'] && (
+                                          <a 
+                                            href={propertyURLs.sale[propType === 'plot' ? 'urbanLand' : propType + 's']} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800"
+                                            title={`Voir ${typeName} vente`}
+                                          >
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        )}
+                                      </div>
+                                      {operations.sale && (
+                                        <span className="text-gray-600">{operations.sale.count} biens</span>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Rent */}
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-green-700 font-medium">
+                                          Location: {operations.rent?.avg_price_per_sqm ? `${operations.rent.avg_price_per_sqm.toFixed(0)} €/m²` : 'N/A'}
+                                        </span>
+                                        {propertyURLs.rent?.[propType + 's'] && propType !== 'plot' && (
+                                          <a 
+                                            href={propertyURLs.rent[propType + 's']} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-green-600 hover:text-green-800"
+                                            title={`Voir ${typeName} location`}
+                                          >
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        )}
+                                      </div>
+                                      {operations.rent && (
+                                        <span className="text-gray-600">{operations.rent.count} biens</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          <div className="mt-4 pt-3 border-t border-blue-200 text-xs text-gray-600">
+                            Total zones: {stat.total_properties}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Fallback: General Regional Overview */}
+            {detailedStats.length === 0 && regionStats.length > 0 && (
               <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle>Aperçu Régional Rapide</CardTitle>
