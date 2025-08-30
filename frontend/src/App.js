@@ -1340,55 +1340,93 @@ function tagus_value_get_market_data() {
           <TabsContent value="sessions">
             <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Historique des Sessions de Scraping</CardTitle>
+                <CardTitle>Sessions de Scraping</CardTitle>
+                <CardDescription>Historique des sessions de scraping avec détails des erreurs</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {scrapingSessions.map((session) => (
                     <div key={session.id} className="p-4 border rounded-lg bg-white/50">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-3">
                         <div>
-                          <p className="font-medium">Session {session.id.slice(0, 8)}</p>
-                          <p className="text-sm text-gray-600">
-                            Démarrée: {new Date(session.started_at).toLocaleString('fr-FR')}
-                          </p>
-                          {session.completed_at && (
-                            <p className="text-sm text-gray-600">
-                              Terminée: {new Date(session.completed_at).toLocaleString('fr-FR')}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={getStatusBadgeColor(session.status)}>
-                            {getStatusText(session.status)}
+                          <Badge variant={
+                            session.status === 'completed' ? 'default' :
+                            session.status === 'failed' ? 'destructive' :
+                            session.status === 'waiting_captcha' ? 'secondary' : 'outline'
+                          }>
+                            {session.status === 'completed' ? '✅ Terminé' :
+                             session.status === 'failed' ? '❌ Échoué' :
+                             session.status === 'waiting_captcha' ? '🔍 CAPTCHA' : '⏳ En cours'}
                           </Badge>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {session.total_properties} propriétés
-                          </p>
-                        </div>
-                      </div>
-                      {session.error_message && (
-                        <Alert className="mt-3">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription>{session.error_message}</AlertDescription>
-                        </Alert>
-                      )}
-                      {session.status === 'waiting_captcha' && (
-                        <div className="mt-3 flex items-center gap-2">
-                          <Camera className="h-4 w-4 text-orange-600" />
-                          <span className="text-sm text-orange-600 font-medium">
-                            En attente de résolution CAPTCHA
+                          <span className="ml-2 text-sm text-gray-600">
+                            {new Date(session.started_at).toLocaleString('fr-FR')}
                           </span>
-                          {session.id === captchaSession?.id && (
-                            <Button
-                              size="sm"
-                              onClick={() => setShowCaptchaDialog(true)}
-                              className="ml-2"
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => fetchSessionDetails(session.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Détails
+                          </Button>
+                          {(session.status === 'failed' || (session.failed_zones && session.failed_zones.length > 0)) && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-orange-600 border-orange-200"
+                              onClick={() => retryFailedZones(session.id)}
                             >
-                              <Eye className="h-3 w-3 mr-1" />
-                              Voir CAPTCHA
+                              <Play className="h-4 w-4 mr-1" />
+                              Retry
                             </Button>
                           )}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600">Propriétés</p>
+                          <p className="font-medium">{session.total_properties || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Régions</p>
+                          <p className="font-medium">{session.regions_scraped ? session.regions_scraped.length : 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Succès</p>
+                          <p className="font-medium text-green-600">{session.success_zones ? session.success_zones.length : 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Échecs</p>
+                          <p className="font-medium text-red-600">{session.failed_zones ? session.failed_zones.length : 0}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Error Summary */}
+                      {session.failed_zones && session.failed_zones.length > 0 && (
+                        <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                          <p className="text-sm font-medium text-red-800 mb-2">Erreurs de Scraping:</p>
+                          <div className="space-y-1">
+                            {session.failed_zones.slice(0, 3).map((failedZone, index) => (
+                              <div key={index} className="text-xs text-red-700">
+                                <strong>{failedZone.zone}</strong>: {failedZone.errors?.[0]?.error || 'Erreur inconnue'}
+                              </div>
+                            ))}
+                            {session.failed_zones.length > 3 && (
+                              <div className="text-xs text-red-600">
+                                ... et {session.failed_zones.length - 3} autres erreurs
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {session.error_message && (
+                        <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                          <p className="text-sm font-medium text-red-800">Erreur Générale:</p>
+                          <p className="text-xs text-red-700">{session.error_message}</p>
                         </div>
                       )}
                     </div>
