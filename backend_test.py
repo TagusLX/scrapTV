@@ -1550,7 +1550,8 @@ def main():
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
     # Special focus on new functionality verification
-    print(f"\n🏠 PROPERTY TYPE CATEGORIZATION & RURAL PLOT TESTING RESULTS:")
+    print(f"\n🔧 ENHANCED ERROR HANDLING & RETRY FUNCTIONALITY TESTING RESULTS:")
+    print(f"   Enhanced Error Handling & Retry Test: {'✅ PASSED' if enhanced_error_test_passed else '❌ FAILED'}")
     print(f"   Property Type Categorization Test: {'✅ PASSED' if property_type_test_passed else '❌ FAILED'}")
     print(f"   Detailed Stats Test: {'✅ PASSED' if detailed_stats_test_passed else '❌ FAILED'}")
     print(f"   Targeted Scraping Test: {'✅ PASSED' if targeted_scraping_test_passed else '❌ FAILED'}")
@@ -1560,10 +1561,10 @@ def main():
     print(f"   Filtering Test: {'✅ PASSED' if filter_test_passed else '❌ FAILED'}")
     
     # Check if main new features passed
-    main_features_passed = property_type_test_passed and detailed_stats_test_passed
+    main_features_passed = enhanced_error_test_passed and property_type_test_passed and detailed_stats_test_passed
     
     if tester.tests_passed == tester.tests_run and main_features_passed:
-        print("🎉 All tests passed! Property type categorization and rural plot functionality verified successfully!")
+        print("🎉 All tests passed! Enhanced error handling, retry functionality, and property type categorization verified successfully!")
         return 0
     else:
         print("❌ Some tests failed!")
