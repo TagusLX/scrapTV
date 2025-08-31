@@ -388,7 +388,7 @@ function tagus_value_get_market_data() {
   };
 
   const handleDistritoChange = (distrito) => {
-    const selectedValue = distrito === "all" ? "" : distrito;
+    const selectedValue = (distrito === "all" || distrito === "none") ? "" : distrito;
     setSelectedDistrito(selectedValue);
     setSelectedConcelho("");
     setSelectedFreguesia("");
@@ -401,7 +401,7 @@ function tagus_value_get_market_data() {
   };
 
   const handleConcelhoChange = (concelho) => {
-    const selectedValue = concelho === "all" ? "" : concelho;
+    const selectedValue = (concelho === "all" || concelho === "none") ? "" : concelho;
     setSelectedConcelho(selectedValue);
     setSelectedFreguesia("");
     setFreguesias([]);
@@ -412,7 +412,7 @@ function tagus_value_get_market_data() {
   };
 
   const handleFrequesiaChange = (freguesia) => {
-    const selectedValue = freguesia === "all" ? "" : freguesia;
+    const selectedValue = (freguesia === "all" || freguesia === "none") ? "" : freguesia;
     setSelectedFreguesia(selectedValue);
   };
 
