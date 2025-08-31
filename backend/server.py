@@ -1268,9 +1268,9 @@ class IdealistaScraper:
                     error_details.append(error_info)
                     logger.warning(f"❌ Failed to stealth scrape {property_type} {operation_type} at {distrito}/{concelho}/{freguesia}: {scraping_error or 'No price data'}")
                 
-                # Additional delay between property types for stealth
-                logger.info(f"Waiting before next property type...")
-                await asyncio.sleep(random.uniform(5, 10))
+                # Additional delay between property types for ultra-stealth
+                logger.info(f"Ultra-stealth waiting before next property type...")
+                await asyncio.sleep(random.uniform(10, 20))  # Even longer delays
                 
             except Exception as e:
                 error_info = {
@@ -1281,8 +1281,12 @@ class IdealistaScraper:
                     'timestamp': datetime.now(timezone.utc).isoformat()
                 }
                 error_details.append(error_info)
-                logger.error(f"Error in stealth scraping {property_type} from {url}: {e}")
+                logger.error(f"Error in ultra-stealth scraping {property_type} from {url}: {e}")
                 continue
+        
+        # Clean up ultra-stealth driver after all property types are processed
+        ultra_stealth_scraper.close_driver()
+        logger.info("Ultra-stealth driver cleaned up")
         
         # Update session with detailed results
         if session_id:
