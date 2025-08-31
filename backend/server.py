@@ -803,6 +803,170 @@ class IdealistaScraper:
             return False
     
     async def scrape_freguesia(self, distrito, concelho, freguesia, operation_type='sale', session_id=None):
+        """Scrape average price per m² from idealista.pt freguesia property listings using stealth methods"""
+        properties = []
+        error_details = []
+        
+        # Construct URLs for idealista.pt property search pages
+        concelho_clean = concelho.lower().replace(' ', '-').replace('_', '-')
+        freguesia_clean = freguesia.lower().replace(' ', '-').replace('_', '-')
+        
+        if operation_type == 'sale':
+            # URLs for different property types in sale
+            urls_to_scrape = [
+                {
+                    'url': f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos/",
+                    'property_type': 'apartment'
+                },
+                {
+                    'url': f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-moradias/",
+                    'property_type': 'house'
+                },
+                {
+                    'url': f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-urbano/",
+                    'property_type': 'urban_plot'
+                },
+                {
+                    'url': f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-nao-urbanizavel/",
+                    'property_type': 'rural_plot'
+                }
+            ]
+        else:
+            # URLs for rentals (no rural plots in rental)
+            urls_to_scrape = [
+                {
+                    'url': f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos,arrendamento-longa-duracao/",
+                    'property_type': 'apartment'
+                },
+                {
+                    'url': f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-moradias,arrendamento-longa-duracao/",
+                    'property_type': 'house'
+                }
+            ]
+        
+        logger.info(f"Starting STEALTH scraping of {len(urls_to_scrape)} property types for: {distrito}/{concelho}/{freguesia} ({operation_type})")
+        
+        all_properties = []
+        
+        for url_info in urls_to_scrape:
+            url = url_info['url']
+            property_type = url_info['property_type']
+            
+            logger.info(f"🕵️ Stealth scraping {property_type} from: {url}")
+            
+            try:
+                # Use stealth scraper instead of Selenium/requests
+                average_price_per_sqm = None
+                real_data_found = False
+                scraping_error = None
+                
+                try:
+                    # Make stealthy request
+                    response = await stealth_scraper.stealthy_get(url)
+                    
+                    if response.status_code == 200:
+                        # Extract price using stealth scraper
+                        zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
+                        
+                        if zone_price:
+                            average_price_per_sqm = zone_price
+                            real_data_found = True
+                            logger.info(f"✅ STEALTH SCRAPED REAL PRICE: {average_price_per_sqm:.2f} €/m² for {property_type}")
+                        else:
+                            scraping_error = extraction_error or "No price data found on page"
+                            logger.warning(f"⚠️ {scraping_error}")
+                            
+                    elif response.status_code == 403:
+                        scraping_error = "HTTP 403 Forbidden - Site is blocking requests (need to adjust stealth parameters)"
+                    elif response.status_code == 429:
+                        scraping_error = "HTTP 429 Too Many Requests - Rate limited (increasing delays)"
+                    elif response.status_code == 404:
+                        scraping_error = "HTTP 404 Not Found - URL might be invalid for this location"
+                    else:
+                        scraping_error = f"HTTP {response.status_code} - Request failed"
+                        
+                except requests.exceptions.Timeout:
+                    scraping_error = "Request timeout - Site too slow to respond"
+                except requests.exceptions.ConnectionError:
+                    scraping_error = "Connection error - Cannot reach idealista.pt"
+                except Exception as e:
+                    scraping_error = f"Stealth scraping failed: {str(e)}"
+                
+                # Create property entry ONLY if we have real scraped data
+                if real_data_found and average_price_per_sqm and average_price_per_sqm > 0:
+                    property_data = {
+                        'region': distrito,
+                        'location': f"{concelho}_{freguesia}",
+                        'property_type': property_type,  # Specific property type (apartment, house, urban_plot, rural_plot)
+                        'price': None,  # Individual property prices not available from zone averages
+                        'price_per_sqm': average_price_per_sqm,  # REAL scraped price from "Preço médio nesta zona"
+                        'area': None,  # Not applicable for zone averages
+                        'operation_type': operation_type,
+                        'url': url
+                    }
+                    
+                    all_properties.append(property_data)
+                    logger.info(f"✅ Added STEALTH SCRAPED {property_type} {operation_type}: {average_price_per_sqm:.2f} €/m² for {distrito}/{concelho}/{freguesia}")
+                else:
+                    # Record detailed error for this property type
+                    error_info = {
+                        'property_type': property_type,
+                        'operation_type': operation_type,
+                        'url': url,
+                        'error': scraping_error or "No real price data found",
+                        'timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+                    error_details.append(error_info)
+                    logger.warning(f"❌ Failed to stealth scrape {property_type} {operation_type} at {distrito}/{concelho}/{freguesia}: {scraping_error or 'No price data'}")
+                
+                # Additional delay between property types for stealth
+                logger.info(f"Waiting before next property type...")
+                await asyncio.sleep(random.uniform(5, 10))
+                
+            except Exception as e:
+                error_info = {
+                    'property_type': property_type,
+                    'operation_type': operation_type,
+                    'url': url,
+                    'error': f"Unexpected error: {str(e)}",
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }
+                error_details.append(error_info)
+                logger.error(f"Error in stealth scraping {property_type} from {url}: {e}")
+                continue
+        
+        # Update session with detailed results
+        if session_id:
+            zone_key = f"{distrito}/{concelho}/{freguesia}"
+            if all_properties:
+                # Success - add to success zones
+                await db.scraping_sessions.update_one(
+                    {"id": session_id},
+                    {"$push": {
+                        "success_zones": {
+                            "zone": zone_key,
+                            "operation_type": operation_type,
+                            "properties_count": len(all_properties),
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        }
+                    }}
+                )
+            
+            if error_details:
+                # Errors occurred - add to failed zones
+                await db.scraping_sessions.update_one(
+                    {"id": session_id},
+                    {"$push": {
+                        "failed_zones": {
+                            "zone": zone_key,
+                            "operation_type": operation_type,
+                            "errors": error_details,
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        }
+                    }}
+                )
+        
+        return all_properties
         """Scrape average price per m² from idealista.pt freguesia property listings"""
         properties = []
         error_details = []
