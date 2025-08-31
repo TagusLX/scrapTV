@@ -160,6 +160,232 @@ PORTUGUESE_STRUCTURE = {
     # Format: {distrito: {concelho: [freguesias...]}}
 }
 
+class StealthScraper:
+    """Enhanced scraper with anti-detection capabilities"""
+    
+    def __init__(self):
+        self.session = requests.Session()
+        self.user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36', 
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0'
+        ]
+        self.referers = [
+            'https://www.google.pt/',
+            'https://www.google.com/',  
+            'https://www.bing.com/',
+            'https://duckduckgo.com/',
+            'https://www.idealista.pt/',
+            None  # Sometimes no referer
+        ]
+        self.languages = [
+            'pt-PT,pt;q=0.9,en;q=0.8,fr;q=0.7',
+            'pt-BR,pt;q=0.9,en;q=0.8',
+            'pt-PT,pt;q=0.8,en-US;q=0.7,en;q=0.6',
+            'pt,en-US;q=0.9,en;q=0.8'
+        ]
+        self.request_count = 0
+        self.last_request_time = 0
+        
+    def get_natural_headers(self):
+        """Generate natural, human-like headers"""
+        user_agent = random.choice(self.user_agents)
+        referer = random.choice(self.referers)
+        language = random.choice(self.languages)
+        
+        headers = {
+            'User-Agent': user_agent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': language,
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Site': 'none' if not referer else 'cross-site',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-User': '?1',
+            'Sec-Fetch-Dest': 'document',
+            'Cache-Control': 'max-age=0',
+        }
+        
+        if referer:
+            headers['Referer'] = referer
+            
+        # Sometimes add additional realistic headers
+        if random.random() < 0.3:
+            headers['Sec-CH-UA'] = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
+            headers['Sec-CH-UA-Mobile'] = '?0'
+            headers['Sec-CH-UA-Platform'] = '"' + random.choice(['Windows', 'macOS', 'Linux']) + '"'
+            
+        return headers
+    
+    async def natural_delay(self, min_seconds=3, max_seconds=8):
+        """Human-like delay between requests"""
+        # Increase delays based on request count to avoid rate limiting
+        base_delay = random.uniform(min_seconds, max_seconds)
+        
+        # Add progressive delays for frequent requests
+        if self.request_count > 10:
+            base_delay += random.uniform(2, 5)
+        if self.request_count > 20:
+            base_delay += random.uniform(3, 8)
+        if self.request_count > 50:
+            base_delay += random.uniform(5, 12)
+            
+        # Ensure minimum time between requests
+        current_time = time.time()
+        time_since_last = current_time - self.last_request_time
+        if time_since_last < 2:  # Minimum 2 seconds between any requests
+            additional_delay = 2 - time_since_last
+            base_delay += additional_delay
+            
+        logger.info(f"Natural delay: {base_delay:.1f} seconds (request #{self.request_count})")
+        await asyncio.sleep(base_delay)
+        self.last_request_time = time.time()
+    
+    async def stealthy_get(self, url, timeout=15):
+        """Make a stealthy HTTP request with natural behavior"""
+        self.request_count += 1
+        
+        # Natural delay before request
+        await self.natural_delay()
+        
+        headers = self.get_natural_headers()
+        
+        # Sometimes perform multiple steps like a human would
+        if random.random() < 0.2:  # 20% chance
+            # First visit the domain root to establish session
+            try:
+                domain_url = 'https://www.idealista.pt/'
+                logger.info("Performing human-like navigation: visiting homepage first")
+                self.session.get(domain_url, headers=headers, timeout=timeout)
+                await asyncio.sleep(random.uniform(1, 3))
+            except:
+                pass
+                
+        try:
+            logger.info(f"Stealthy GET: {url}")
+            logger.info(f"Using User-Agent: {headers['User-Agent'][:80]}...")
+            
+            response = self.session.get(url, headers=headers, timeout=timeout)
+            
+            # Log response details for debugging
+            logger.info(f"Response: {response.status_code} - {len(response.content)} bytes")
+            
+            if response.status_code == 403:
+                logger.warning("403 Forbidden received - implementing extended backoff")
+                # Extended backoff for 403 errors
+                backoff_time = random.uniform(30, 60)
+                logger.info(f"Backing off for {backoff_time:.1f} seconds due to 403")
+                await asyncio.sleep(backoff_time)
+                
+            elif response.status_code == 429:
+                logger.warning("429 Too Many Requests - implementing long backoff")
+                # Very long backoff for rate limiting
+                backoff_time = random.uniform(60, 120)
+                logger.info(f"Backing off for {backoff_time:.1f} seconds due to 429")
+                await asyncio.sleep(backoff_time)
+            
+            return response
+            
+        except requests.exceptions.Timeout:
+            logger.warning(f"Request timeout for {url}")
+            raise
+        except requests.exceptions.ConnectionError as e:
+            logger.warning(f"Connection error for {url}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error for {url}: {e}")
+            raise
+    
+    def extract_zone_price(self, html_content, url):
+        """Extract zone average price from HTML content"""
+        if not html_content:
+            return None, "Empty HTML content"
+            
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Method 1: Search for items-average-price class
+            zone_price_elements = soup.find_all(class_="items-average-price")
+            for elem in zone_price_elements:
+                try:
+                    price_text = elem.get_text().strip()
+                    logger.info(f"Found items-average-price element: '{price_text}'")
+                    
+                    # Look for price patterns like "11,05 eur/m²"
+                    price_patterns = [
+                        r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',  # "11,05 eur/m²"
+                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',   # "11,05 €/m²"
+                        r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?' # "11,05 euros/m²"
+                    ]
+                    
+                    for pattern in price_patterns:
+                        price_match = re.search(pattern, price_text, re.IGNORECASE)
+                        if price_match:
+                            price_str = price_match.group(1).replace(',', '.')
+                            try:
+                                zone_price = float(price_str)
+                                if 0.5 <= zone_price <= 1000:
+                                    logger.info(f"✅ Extracted zone price from items-average-price: {zone_price:.2f} €/m²")
+                                    return zone_price, None
+                            except:
+                                continue
+                except:
+                    continue
+            
+            # Method 2: Search for "Preço médio nesta zona" text pattern
+            page_text = soup.get_text()
+            zone_patterns = [
+                r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
+                r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
+                r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
+            ]
+            
+            for pattern in zone_patterns:
+                zone_match = re.search(pattern, page_text, re.IGNORECASE)
+                if zone_match:
+                    price_str = zone_match.group(1).replace(',', '.')
+                    try:
+                        zone_price = float(price_str)
+                        if 0.5 <= zone_price <= 1000:
+                            logger.info(f"✅ Extracted zone price from text pattern: {zone_price:.2f} €/m²")
+                            return zone_price, None
+                    except:
+                        continue
+            
+            # Method 3: Search for any €/m² mentions as fallback
+            euro_per_sqm_matches = re.findall(r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?', page_text, re.IGNORECASE)
+            if euro_per_sqm_matches:
+                logger.info(f"Found {len(euro_per_sqm_matches)} €/m² prices on page")
+                valid_prices = []
+                for price_str in euro_per_sqm_matches[:5]:  # Check first 5
+                    clean_price = price_str.replace(',', '.')
+                    try:
+                        price = float(clean_price)
+                        if 0.5 <= price <= 1000:
+                            valid_prices.append(price)
+                    except:
+                        continue
+                
+                if valid_prices:
+                    avg_price = sum(valid_prices) / len(valid_prices)
+                    logger.info(f"✅ Calculated average from {len(valid_prices)} prices: {avg_price:.2f} €/m²")
+                    return avg_price, None
+            
+            return None, "No 'items-average-price' element or 'Preço médio nesta zona' found on page"
+            
+        except Exception as e:
+            return None, f"HTML parsing error: {str(e)}"
+
+# Initialize stealth scraper
+stealth_scraper = StealthScraper()
+
 class IdealistaScraper:
     def __init__(self):
         self.driver = None
