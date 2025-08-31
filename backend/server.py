@@ -2140,6 +2140,10 @@ async def get_scraping_session(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
+    # Remove MongoDB ObjectId to avoid serialization issues
+    if "_id" in session:
+        del session["_id"]
+    
     return session
 
 @api_router.get("/scraping-sessions/{session_id}/errors")
