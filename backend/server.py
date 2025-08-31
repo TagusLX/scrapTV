@@ -1041,7 +1041,6 @@ class IdealistaScraper:
                         await asyncio.sleep(3)
                         
                         # Check for CAPTCHA (realistic CAPTCHA simulation)
-                        import random
                         if random.random() < 0.15:  # 15% chance of CAPTCHA
                             scraping_error = "CAPTCHA detected - manual intervention required"
                             logger.info(f"CAPTCHA detected during {property_type} scraping")
