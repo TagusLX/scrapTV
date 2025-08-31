@@ -160,6 +160,335 @@ PORTUGUESE_STRUCTURE = {
     # Format: {distrito: {concelho: [freguesias...]}}
 }
 
+class UltraStealthScraper:
+    """Ultra-stealth scraper with advanced anti-detection using real browser profiles"""
+    
+    def __init__(self):
+        self.driver = None
+        self.session_cookies = {}
+        self.request_count = 0
+        self.last_request_time = 0
+        self.current_user_profile = None
+        
+        # More realistic user profiles with consistent behavior
+        self.user_profiles = [
+            {
+                'name': 'Portuguese_Chrome_User',
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'language': 'pt-PT,pt;q=0.9',
+                'timezone': 'Europe/Lisbon',
+                'screen': {'width': 1920, 'height': 1080},
+                'viewport': {'width': 1536, 'height': 864},
+                'platform': 'Win32'
+            },
+            {
+                'name': 'Portuguese_Firefox_User', 
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+                'language': 'pt-PT,pt;q=0.8,en-US;q=0.5,en;q=0.3',
+                'timezone': 'Europe/Lisbon',
+                'screen': {'width': 1920, 'height': 1080},
+                'viewport': {'width': 1520, 'height': 850},
+                'platform': 'Win32'
+            },
+            {
+                'name': 'Portuguese_Mac_User',
+                'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'language': 'pt-PT,pt;q=0.9,en;q=0.8',
+                'timezone': 'Europe/Lisbon', 
+                'screen': {'width': 2560, 'height': 1440},
+                'viewport': {'width': 2560, 'height': 1329},
+                'platform': 'MacIntel'
+            }
+        ]
+        
+    def setup_ultra_stealth_driver(self):
+        """Setup Selenium with ultra-stealth configuration"""
+        try:
+            # Select a consistent user profile for this session
+            self.current_user_profile = random.choice(self.user_profiles)
+            logger.info(f"Using user profile: {self.current_user_profile['name']}")
+            
+            options = Options()
+            
+            # Basic stealth options
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            
+            # Advanced anti-detection
+            options.add_argument('--disable-web-security')
+            options.add_argument('--allow-running-insecure-content')
+            options.add_argument('--disable-features=VizDisplayCompositor')
+            options.add_argument('--disable-extensions')
+            options.add_argument('--disable-plugins')
+            options.add_argument('--disable-images')  # Faster loading, more human-like for price checking
+            options.add_argument('--disable-javascript')  # Disable JS to avoid fingerprinting (we only need HTML)
+            
+            # User profile specific settings
+            profile = self.current_user_profile
+            options.add_argument(f'--user-agent={profile["user_agent"]}')
+            options.add_argument(f'--window-size={profile["viewport"]["width"]},{profile["viewport"]["height"]}')
+            options.add_argument(f'--lang={profile["language"].split(",")[0]}')
+            
+            # More realistic preferences
+            prefs = {
+                "profile.default_content_setting_values": {
+                    "images": 2,  # Block images for faster loading
+                    "media_stream": 2,
+                    "notifications": 2
+                },
+                "profile.managed_default_content_settings": {
+                    "images": 2
+                }
+            }
+            options.add_experimental_option("prefs", prefs)
+            
+            # Create driver
+            self.driver = webdriver.Chrome(options=options)
+            
+            # Additional stealth JavaScript
+            self.driver.execute_cdp_cmd('Runtime.enable', {})
+            self.driver.execute_cdp_cmd('Runtime.evaluate', {
+                'expression': '''
+                    Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                    Object.defineProperty(navigator, 'languages', {get: () => ['pt-PT', 'pt', 'en']});
+                    Object.defineProperty(navigator, 'platform', {get: () => '%s'});
+                    window.chrome = {runtime: {}};
+                ''' % profile['platform']
+            })
+            
+            # Set viewport to match profile
+            self.driver.set_window_size(profile['viewport']['width'], profile['viewport']['height'])
+            
+            logger.info(f"Ultra-stealth Chrome driver initialized with profile: {profile['name']}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to setup ultra-stealth driver: {e}")
+            return False
+    
+    async def simulate_human_behavior(self):
+        """Simulate realistic human browsing behavior"""
+        if not self.driver:
+            return
+            
+        try:
+            # Random mouse movement (simulate with JavaScript)
+            await asyncio.sleep(random.uniform(0.5, 1.5))
+            
+            # Simulate reading time
+            reading_time = random.uniform(2, 6)
+            logger.info(f"Simulating reading time: {reading_time:.1f} seconds")
+            await asyncio.sleep(reading_time)
+            
+            # Random scroll simulation
+            if random.random() < 0.7:  # 70% chance to scroll
+                scroll_amount = random.randint(200, 800)
+                self.driver.execute_script(f"window.scrollTo(0, {scroll_amount});")
+                await asyncio.sleep(random.uniform(0.5, 1.2))
+                
+                # Scroll back up sometimes
+                if random.random() < 0.3:  # 30% chance
+                    self.driver.execute_script("window.scrollTo(0, 0);")
+                    await asyncio.sleep(random.uniform(0.3, 0.8))
+            
+        except Exception as e:
+            logger.warning(f"Error in human behavior simulation: {e}")
+    
+    async def ultra_stealth_delay(self):
+        """Ultra-conservative delay strategy"""
+        # Base delay: much longer than before
+        base_delay = random.uniform(15, 30)  # 15-30 seconds base
+        
+        # Progressive delays get even more aggressive
+        if self.request_count > 5:
+            base_delay += random.uniform(10, 20)
+        if self.request_count > 10:
+            base_delay += random.uniform(15, 30)
+        if self.request_count > 15:
+            base_delay += random.uniform(20, 45)
+            
+        # Ensure minimum time since last request
+        current_time = time.time()
+        time_since_last = current_time - self.last_request_time
+        if time_since_last < 10:  # Minimum 10 seconds between any requests
+            additional_delay = 10 - time_since_last
+            base_delay += additional_delay
+            
+        logger.info(f"Ultra-stealth delay: {base_delay:.1f} seconds (request #{self.request_count})")
+        await asyncio.sleep(base_delay)
+        self.last_request_time = time.time()
+    
+    async def visit_homepage_naturally(self):
+        """Visit Idealista homepage first to establish natural session"""
+        if not self.driver:
+            return False
+            
+        try:
+            logger.info("🏠 Visiting Idealista homepage to establish natural session...")
+            self.driver.get("https://www.idealista.pt/")
+            
+            # Simulate natural homepage browsing
+            await asyncio.sleep(random.uniform(3, 7))
+            
+            # Accept cookies if present (human-like behavior)
+            try:
+                cookie_button = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Aceitar') or contains(text(), 'aceitar') or contains(@id, 'cookie')]")
+                if cookie_button:
+                    await asyncio.sleep(random.uniform(1, 3))
+                    cookie_button.click()
+                    logger.info("✅ Clicked cookie acceptance button")
+                    await asyncio.sleep(random.uniform(1, 2))
+            except:
+                pass  # No cookies banner or already accepted
+            
+            # Simulate some homepage interaction
+            await self.simulate_human_behavior()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error visiting homepage: {e}")
+            return False
+    
+    async def ultra_stealth_get(self, url):
+        """Ultra-stealth page retrieval with full browser simulation"""
+        self.request_count += 1
+        
+        # Setup driver if not exists
+        if not self.driver:
+            if not self.setup_ultra_stealth_driver():
+                raise Exception("Failed to setup ultra-stealth driver")
+        
+        # Ultra-conservative delay
+        await self.ultra_stealth_delay()
+        
+        # Visit homepage first for new sessions (establish natural navigation)
+        if self.request_count == 1:
+            await self.visit_homepage_naturally()
+            await asyncio.sleep(random.uniform(2, 5))
+        
+        try:
+            logger.info(f"🕵️ Ultra-stealth GET: {url}")
+            logger.info(f"Using profile: {self.current_user_profile['name']}")
+            
+            # Navigate to target URL
+            self.driver.get(url)
+            
+            # Wait for page load
+            await asyncio.sleep(random.uniform(5, 10))
+            
+            # Check for anti-bot challenges
+            page_source = self.driver.page_source.lower()
+            if 'cloudflare' in page_source or 'challenge' in page_source or 'checking your browser' in page_source:
+                logger.warning("🛡️ Anti-bot challenge detected, waiting longer...")
+                await asyncio.sleep(random.uniform(10, 20))
+                
+                # Refresh page source after waiting
+                page_source = self.driver.page_source
+            
+            # Simulate human behavior on the target page
+            await self.simulate_human_behavior()
+            
+            return self.driver.page_source
+            
+        except Exception as e:
+            logger.error(f"Ultra-stealth GET failed for {url}: {e}")
+            raise
+    
+    def extract_zone_price_from_selenium(self, url):
+        """Extract zone price using Selenium with multiple strategies"""
+        if not self.driver:
+            return None, "No driver available"
+        
+        try:
+            # Strategy 1: Look for items-average-price class
+            try:
+                price_elements = self.driver.find_elements(By.CLASS_NAME, "items-average-price")
+                for elem in price_elements:
+                    price_text = elem.text.strip()
+                    logger.info(f"Found items-average-price element: '{price_text}'")
+                    
+                    # Extract price using regex
+                    price_patterns = [
+                        r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
+                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
+                    ]
+                    
+                    for pattern in price_patterns:
+                        price_match = re.search(pattern, price_text, re.IGNORECASE)
+                        if price_match:
+                            price_str = price_match.group(1).replace(',', '.')
+                            try:
+                                zone_price = float(price_str)
+                                if 0.5 <= zone_price <= 1000:
+                                    logger.info(f"✅ Selenium extracted price from items-average-price: {zone_price:.2f} €/m²")
+                                    return zone_price, None
+                            except:
+                                continue
+            except:
+                pass
+            
+            # Strategy 2: Search by XPath for "Preço médio nesta zona"
+            try:
+                xpath_patterns = [
+                    "//*[contains(text(), 'Preço médio nesta zona')]",
+                    "//*[contains(text(), 'preço médio nesta zona')]",
+                    "//*[contains(text(), 'Preço médio')]"
+                ]
+                
+                for xpath in xpath_patterns:
+                    elements = self.driver.find_elements(By.XPATH, xpath)
+                    for elem in elements:
+                        # Check element and parent elements for price
+                        elements_to_check = [elem, elem.find_element(By.XPATH, "..")]
+                        
+                        for check_elem in elements_to_check:
+                            try:
+                                price_text = check_elem.text
+                                price_patterns = [
+                                    r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
+                                    r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
+                                ]
+                                
+                                for pattern in price_patterns:
+                                    price_match = re.search(pattern, price_text, re.IGNORECASE)
+                                    if price_match:
+                                        price_str = price_match.group(1).replace(',', '.')
+                                        try:
+                                            zone_price = float(price_str)
+                                            if 0.5 <= zone_price <= 1000:
+                                                logger.info(f"✅ Selenium extracted price from XPath: {zone_price:.2f} €/m²")
+                                                return zone_price, None
+                                        except:
+                                            continue
+                            except:
+                                continue
+            except:
+                pass
+            
+            # Strategy 3: Parse full page source as fallback
+            page_source = self.driver.page_source
+            return stealth_scraper.extract_zone_price(page_source, url)
+            
+        except Exception as e:
+            return None, f"Selenium price extraction error: {str(e)}"
+    
+    def close_driver(self):
+        """Clean up Selenium driver"""
+        if self.driver:
+            try:
+                self.driver.quit()
+                self.driver = None
+                logger.info("Ultra-stealth driver closed")
+            except:
+                pass
+
+# Initialize ultra-stealth scraper
+ultra_stealth_scraper = UltraStealthScraper()
+
 class StealthScraper:
     """Enhanced scraper with anti-detection capabilities"""
     
