@@ -1656,7 +1656,6 @@ class IdealistaScraper:
             draw = ImageDraw.Draw(img)
             
             # Add some simple text as mock CAPTCHA
-            import random
             captcha_text = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=5))
             
             try:
