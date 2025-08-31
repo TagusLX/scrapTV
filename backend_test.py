@@ -1710,16 +1710,20 @@ class IdealistaScraperAPITester:
         return all_tests_passed
 
 def main():
-    print("🚀 Starting Idealista Scraper API Tests - Enhanced Error Handling & Retry Functionality")
+    print("🚀 Starting Idealista Scraper API Tests - Stealth Scraping System Testing")
     print("=" * 80)
     
     tester = IdealistaScraperAPITester()
     
-    # Test NEW enhanced error handling and retry functionality (MAIN FOCUS)
-    print("\n🔧 MAIN TEST: Enhanced Error Handling & Retry Functionality")
+    # Test NEW: Stealth scraping system (MAIN FOCUS)
+    print("\n🕵️ MAIN TEST: Stealth Scraping System")
+    stealth_scraping_test_passed = tester.test_stealth_scraping_system()
+    
+    # Test enhanced error handling and retry functionality
+    print("\n🔧 Testing Enhanced Error Handling & Retry Functionality")
     enhanced_error_test_passed = tester.test_enhanced_error_handling_and_retry()
     
-    # Test NEW property type categorization and rural plot functionality
+    # Test property type categorization and rural plot functionality
     print("\n🏠 Testing Property Type Categorization & Rural Plot Functionality")
     property_type_test_passed = tester.test_property_type_categorization()
     
@@ -1727,11 +1731,11 @@ def main():
     print("\n📈 Testing Detailed Statistics Endpoint with New Property Types")
     detailed_stats_test_passed = tester.test_detailed_stats_endpoint()
     
-    # Test NEW targeted scraping endpoint
+    # Test targeted scraping endpoint
     print("\n🎯 Testing Targeted Scraping Endpoint")
     targeted_scraping_test_passed = tester.test_targeted_scraping_endpoint()
     
-    # Test NEW detailed coverage endpoint
+    # Test detailed coverage endpoint
     print("\n📊 Testing Detailed Coverage Endpoint")
     detailed_coverage_test_passed = tester.test_detailed_coverage_endpoint()
     
@@ -1793,8 +1797,9 @@ def main():
     print("\n" + "=" * 80)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
     
-    # Special focus on new functionality verification
-    print(f"\n🔧 ENHANCED ERROR HANDLING & RETRY FUNCTIONALITY TESTING RESULTS:")
+    # Special focus on stealth scraping system verification
+    print(f"\n🕵️ STEALTH SCRAPING SYSTEM TESTING RESULTS:")
+    print(f"   Stealth Scraping System Test: {'✅ PASSED' if stealth_scraping_test_passed else '❌ FAILED'}")
     print(f"   Enhanced Error Handling & Retry Test: {'✅ PASSED' if enhanced_error_test_passed else '❌ FAILED'}")
     print(f"   Property Type Categorization Test: {'✅ PASSED' if property_type_test_passed else '❌ FAILED'}")
     print(f"   Detailed Stats Test: {'✅ PASSED' if detailed_stats_test_passed else '❌ FAILED'}")
@@ -1805,10 +1810,10 @@ def main():
     print(f"   Filtering Test: {'✅ PASSED' if filter_test_passed else '❌ FAILED'}")
     
     # Check if main new features passed
-    main_features_passed = enhanced_error_test_passed and property_type_test_passed and detailed_stats_test_passed
+    main_features_passed = stealth_scraping_test_passed and enhanced_error_test_passed and property_type_test_passed
     
     if tester.tests_passed == tester.tests_run and main_features_passed:
-        print("🎉 All tests passed! Enhanced error handling, retry functionality, and property type categorization verified successfully!")
+        print("🎉 All tests passed! Stealth scraping system, enhanced error handling, and property type categorization verified successfully!")
         return 0
     else:
         print("❌ Some tests failed!")
