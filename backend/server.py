@@ -1184,42 +1184,62 @@ class IdealistaScraper:
             logger.info(f"🕵️ Stealth scraping {property_type} from: {url}")
             
             try:
-                # Use stealth scraper instead of Selenium/requests
+                # Use ULTRA-STEALTH scraper instead of basic stealth
                 average_price_per_sqm = None
                 real_data_found = False
                 scraping_error = None
                 
+                logger.info(f"🛡️ Attempting ULTRA-STEALTH scraping for {property_type}")
+                
                 try:
-                    # Make stealthy request
-                    response = await stealth_scraper.stealthy_get(url)
+                    # Use ultra-stealth Selenium approach
+                    page_source = await ultra_stealth_scraper.ultra_stealth_get(url)
                     
-                    if response.status_code == 200:
-                        # Extract price using stealth scraper
-                        zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
+                    if page_source:
+                        # Extract price using Selenium-specific methods
+                        zone_price, extraction_error = ultra_stealth_scraper.extract_zone_price_from_selenium(url)
                         
                         if zone_price:
                             average_price_per_sqm = zone_price
                             real_data_found = True
-                            logger.info(f"✅ STEALTH SCRAPED REAL PRICE: {average_price_per_sqm:.2f} €/m² for {property_type}")
+                            logger.info(f"✅ ULTRA-STEALTH SUCCESS: {average_price_per_sqm:.2f} €/m² for {property_type}")
                         else:
-                            scraping_error = extraction_error or "No price data found on page"
-                            logger.warning(f"⚠️ {scraping_error}")
-                            
-                    elif response.status_code == 403:
-                        scraping_error = "HTTP 403 Forbidden - Site is blocking requests (need to adjust stealth parameters)"
-                    elif response.status_code == 429:
-                        scraping_error = "HTTP 429 Too Many Requests - Rate limited (increasing delays)"
-                    elif response.status_code == 404:
-                        scraping_error = "HTTP 404 Not Found - URL might be invalid for this location"
+                            scraping_error = extraction_error or "No price data found with ultra-stealth method"
+                            logger.warning(f"⚠️ Ultra-stealth extraction failed: {scraping_error}")
                     else:
-                        scraping_error = f"HTTP {response.status_code} - Request failed"
+                        scraping_error = "Ultra-stealth page retrieval failed"
                         
-                except requests.exceptions.Timeout:
-                    scraping_error = "Request timeout - Site too slow to respond"
-                except requests.exceptions.ConnectionError:
-                    scraping_error = "Connection error - Cannot reach idealista.pt"
-                except Exception as e:
-                    scraping_error = f"Stealth scraping failed: {str(e)}"
+                except Exception as ultra_e:
+                    scraping_error = f"Ultra-stealth method failed: {str(ultra_e)}"
+                    logger.warning(f"Ultra-stealth attempt failed: {ultra_e}")
+                    
+                    # Fallback to basic stealth scraper if ultra-stealth fails
+                    logger.info("Falling back to basic stealth scraper...")
+                    try:
+                        response = await stealth_scraper.stealthy_get(url)
+                        
+                        if response.status_code == 200:
+                            # Extract price using basic stealth scraper
+                            zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
+                            
+                            if zone_price:
+                                average_price_per_sqm = zone_price
+                                real_data_found = True
+                                logger.info(f"✅ BASIC STEALTH SUCCESS: {average_price_per_sqm:.2f} €/m² for {property_type}")
+                            else:
+                                scraping_error = extraction_error or "No price data found on page"
+                                
+                        elif response.status_code == 403:
+                            scraping_error = "HTTP 403 Forbidden - Site is blocking requests (both ultra and basic stealth failed)"
+                        elif response.status_code == 429:
+                            scraping_error = "HTTP 429 Too Many Requests - Rate limited (need longer delays)"
+                        elif response.status_code == 404:
+                            scraping_error = "HTTP 404 Not Found - URL might be invalid for this location"
+                        else:
+                            scraping_error = f"HTTP {response.status_code} - Request failed"
+                            
+                    except Exception as basic_e:
+                        scraping_error = f"Both ultra-stealth and basic stealth failed: {str(basic_e)}"
                 
                 # Create property entry ONLY if we have real scraped data
                 if real_data_found and average_price_per_sqm and average_price_per_sqm > 0:
