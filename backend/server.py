@@ -160,6 +160,240 @@ PORTUGUESE_STRUCTURE = {
     # Format: {distrito: {concelho: [freguesias...]}}
 }
 
+class ProxyRotationScraper:
+    """Advanced scraper with residential proxy rotation and session management"""
+    
+    def __init__(self):
+        # Free proxy lists (rotating residential proxies)
+        self.proxy_sources = [
+            "https://api.proxyscrape.com/v2/?request=get&protocol=http&timeout=10000&country=PT&format=json",
+            "https://www.proxy-list.download/api/v1/get?type=http&anon=elite&country=PT",
+        ]
+        self.working_proxies = []
+        self.current_proxy_index = 0
+        self.sessions = {}
+        
+    async def fetch_fresh_proxies(self):
+        """Fetch fresh Portuguese residential proxies"""
+        proxies = []
+        try:
+            # Method 1: Use known Portuguese residential proxy ranges
+            portuguese_proxy_ips = [
+                "213.13.147.0/24",  # NOS Portugal
+                "87.196.0.0/16",    # MEO Portugal  
+                "85.244.0.0/16",    # Vodafone Portugal
+                "178.168.0.0/16",   # NOWO Portugal
+            ]
+            
+            # For now, use public proxies as fallback
+            import requests
+            for source in self.proxy_sources:
+                try:
+                    response = requests.get(source, timeout=10)
+                    if response.status_code == 200:
+                        proxy_data = response.json()
+                        for proxy in proxy_data:
+                            if isinstance(proxy, dict):
+                                ip = proxy.get('ip')
+                                port = proxy.get('port')
+                                if ip and port:
+                                    proxies.append(f"{ip}:{port}")
+                except:
+                    continue
+                    
+            self.working_proxies = proxies[:20]  # Use first 20 proxies
+            logger.info(f"Fetched {len(self.working_proxies)} proxies for rotation")
+            
+        except Exception as e:
+            logger.warning(f"Could not fetch proxies: {e}")
+            
+    def get_next_proxy(self):
+        """Get next proxy in rotation"""
+        if not self.working_proxies:
+            return None
+            
+        proxy = self.working_proxies[self.current_proxy_index]
+        self.current_proxy_index = (self.current_proxy_index + 1) % len(self.working_proxies)
+        return proxy
+        
+    async def test_proxy(self, proxy):
+        """Test if a proxy works with Idealista"""
+        try:
+            proxies = {
+                'http': f'http://{proxy}',
+                'https': f'http://{proxy}'
+            }
+            
+            headers = ultra_stealth_scraper.current_user_profile or {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            
+            # Test with Idealista homepage
+            response = requests.get('https://www.idealista.pt/', 
+                                  proxies=proxies, 
+                                  headers=headers, 
+                                  timeout=15)
+            
+            if response.status_code == 200:
+                logger.info(f"✅ Proxy {proxy} working")
+                return True
+            else:
+                logger.warning(f"❌ Proxy {proxy} returned {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"❌ Proxy {proxy} failed: {e}")
+            return False
+
+### **2. 🍪 Session Persistence Complète**
+
+class SessionManager:
+    """Manage persistent browser sessions with cookies and history"""
+    
+    def __init__(self):
+        self.sessions = {}
+        self.session_cookies = {}
+        
+    async def create_realistic_session(self, session_id):
+        """Create a realistic browsing session"""
+        try:
+            session = requests.Session()
+            
+            # Step 1: Visit Google Portugal first (natural entry point)
+            logger.info("🌍 Creating realistic session: Starting from Google Portugal...")
+            session.get('https://www.google.pt/', timeout=15)
+            await asyncio.sleep(random.uniform(2, 5))
+            
+            # Step 2: Search for "apartamentos Lisboa" on Google (natural search)
+            search_params = {
+                'q': random.choice([
+                    'apartamentos Lisboa idealista',
+                    'casas para comprar Porto',
+                    'preços habitação Portugal',
+                    'imobiliário Faro'
+                ])
+            }
+            logger.info(f"🔍 Simulating Google search: {search_params['q']}")
+            session.get('https://www.google.pt/search', params=search_params, timeout=15)
+            await asyncio.sleep(random.uniform(3, 8))
+            
+            # Step 3: Visit Idealista homepage (natural navigation from Google)
+            logger.info("🏠 Natural navigation: Google -> Idealista homepage")
+            homepage_response = session.get('https://www.idealista.pt/', timeout=15)
+            await asyncio.sleep(random.uniform(4, 10))
+            
+            # Step 4: Browse a few pages naturally (establish cookies and behavior)
+            natural_pages = [
+                'https://www.idealista.pt/comprar-casas/',
+                'https://www.idealista.pt/arrendar-casas/',
+                'https://www.idealista.pt/comprar-casas/lisboa/',
+            ]
+            
+            for page in natural_pages[:2]:  # Visit 2 pages naturally
+                logger.info(f"📄 Natural browsing: {page}")
+                session.get(page, timeout=15)
+                await asyncio.sleep(random.uniform(5, 12))
+            
+            # Store session
+            self.sessions[session_id] = session
+            self.session_cookies[session_id] = session.cookies
+            
+            logger.info(f"✅ Realistic session created with {len(session.cookies)} cookies")
+            return session
+            
+        except Exception as e:
+            logger.error(f"Failed to create realistic session: {e}")
+            return None
+
+### **3. 🤖 Undetected Chrome avec Anti-Fingerprinting**
+
+class UndetectedScraper:
+    """Ultra-advanced scraper with undetected-chromedriver and anti-fingerprinting"""
+    
+    def __init__(self):
+        self.driver = None
+        
+    async def setup_undetected_chrome(self):
+        """Setup truly undetected Chrome browser"""
+        try:
+            # Install undetected-chromedriver if not available
+            try:
+                import undetected_chromedriver as uc
+            except ImportError:
+                logger.info("Installing undetected-chromedriver...")
+                import subprocess
+                subprocess.check_call(["pip", "install", "undetected-chromedriver"])
+                import undetected_chromedriver as uc
+            
+            # Advanced undetected Chrome options
+            options = uc.ChromeOptions()
+            
+            # Stealth options
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            
+            # Anti-fingerprinting
+            options.add_argument('--disable-features=VizDisplayCompositor')
+            options.add_argument('--disable-web-security')
+            options.add_argument('--disable-features=TranslateUI')
+            options.add_argument('--disable-ipc-flooding-protection')
+            
+            # Portuguese location simulation
+            prefs = {
+                "profile.default_content_setting_values.geolocation": 1,
+                "profile.managed_default_content_settings.geolocation": 1,
+                "profile.default_content_settings.popups": 0,
+                "profile.managed_default_content_settings.notifications": 2
+            }
+            options.add_experimental_option("prefs", prefs)
+            
+            # Create undetected Chrome instance
+            self.driver = uc.Chrome(options=options, version_main=120)
+            
+            # Set Portuguese geolocation
+            params = {
+                "latitude": 38.7223,  # Lisbon coordinates
+                "longitude": -9.1393,
+                "accuracy": 100
+            }
+            self.driver.execute_cdp_cmd("Emulation.setGeolocationOverride", params)
+            
+            # Advanced anti-detection JavaScript
+            stealth_js = """
+                // Remove webdriver traces
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                
+                // Override plugins
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5].map(() => 'Plugin')
+                });
+                
+                // Override languages  
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['pt-PT', 'pt', 'en-US', 'en']
+                });
+                
+                // Add realistic properties
+                window.chrome = {runtime: {}};
+                Object.defineProperty(navigator, 'permissions', {
+                    get: () => ({query: () => Promise.resolve({state: 'granted'})})
+                });
+            """
+            self.driver.execute_cdp_cmd('Runtime.evaluate', {'expression': stealth_js})
+            
+            logger.info("✅ Undetected Chrome setup complete")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to setup undetected Chrome: {e}")
+            return False
+
+# Initialize advanced scrapers
+proxy_scraper = ProxyRotationScraper()
+session_manager = SessionManager()
+undetected_scraper = UndetectedScraper()
+
 class UltraStealthScraper:
     """Ultra-stealth scraper with advanced anti-detection using real browser profiles"""
     
