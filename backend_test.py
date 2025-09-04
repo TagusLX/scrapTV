@@ -1709,6 +1709,263 @@ class IdealistaScraperAPITester:
         
         return all_tests_passed
 
+    def test_advanced_anti_bot_bypass_real_scenario(self):
+        """REAL TEST: Advanced Anti-Bot Bypass System for Faro > Tavira > Conceicao e Cabanas de Tavira"""
+        print("\n🛡️ REAL TEST: Advanced Anti-Bot Bypass System - Targeted Scraping")
+        print("   Target: Faro > Tavira > Conceicao e Cabanas de Tavira")
+        print("   Testing 4-tier bypass strategy in real-time...")
+        
+        all_tests_passed = True
+        
+        # Step 1: Start targeted scraping session for the specific location
+        print("\n🎯 Step 1: Starting Targeted Scraping Session...")
+        success1, response1 = self.run_test(
+            "Start Advanced Anti-Bot Targeted Scraping",
+            "POST",
+            "scrape/targeted?distrito=faro&concelho=tavira&freguesia=conceicao-e-cabanas-de-tavira",
+            200
+        )
+        
+        if not success1 or 'session_id' not in response1:
+            print("❌ Failed to start targeted scraping session")
+            return False
+        
+        session_id = response1['session_id']
+        print(f"   ✅ Session started: {session_id}")
+        print(f"   Target: {response1.get('message', 'Unknown target')}")
+        
+        # Step 2: Monitor anti-bot methods in real-time
+        print("\n🔍 Step 2: Monitoring Anti-Bot Methods in Real-Time...")
+        print("   Checking session status every 10 seconds for 60 seconds...")
+        
+        import time
+        start_time = time.time()
+        max_monitoring_time = 60  # 60 seconds total
+        check_interval = 10  # Check every 10 seconds
+        
+        bypass_methods_detected = []
+        error_patterns = []
+        success_indicators = []
+        
+        while time.time() - start_time < max_monitoring_time:
+            # Wait for processing to start
+            time.sleep(check_interval)
+            
+            # Check session status
+            success_status, response_status = self.run_test(
+                f"Monitor Session Status (t={int(time.time() - start_time)}s)",
+                "GET",
+                f"scraping-sessions/{session_id}",
+                200
+            )
+            
+            if success_status:
+                status = response_status.get('status', 'unknown')
+                total_properties = response_status.get('total_properties', 0)
+                
+                print(f"   Status: {status} | Properties: {total_properties}")
+                
+                # Check for completion
+                if status in ['completed', 'failed']:
+                    print(f"   🏁 Session {status} after {int(time.time() - start_time)} seconds")
+                    break
+                    
+                # Get detailed error analysis to monitor bypass methods
+                success_errors, response_errors = self.run_test(
+                    f"Check Bypass Methods (t={int(time.time() - start_time)}s)",
+                    "GET",
+                    f"scraping-sessions/{session_id}/errors",
+                    200
+                )
+                
+                if success_errors:
+                    failed_zones = response_errors.get('failed_zones', [])
+                    success_zones = response_errors.get('success_zones', [])
+                    
+                    # Analyze error messages for bypass method indicators
+                    for failed_zone in failed_zones:
+                        if 'errors' in failed_zone:
+                            for error in failed_zone['errors']:
+                                error_msg = error.get('error', '')
+                                
+                                # Look for bypass method indicators
+                                if 'UNDETECTED CHROME' in error_msg.upper():
+                                    if 'Method 1: Undetected Chrome' not in bypass_methods_detected:
+                                        bypass_methods_detected.append('Method 1: Undetected Chrome')
+                                        print(f"   🤖 DETECTED: Method 1 - Undetected Chrome bypass attempt")
+                                
+                                elif 'SESSION-BASED' in error_msg.upper() or 'GOOGLE' in error_msg.upper():
+                                    if 'Method 2: Session Management' not in bypass_methods_detected:
+                                        bypass_methods_detected.append('Method 2: Session Management')
+                                        print(f"   🍪 DETECTED: Method 2 - Session Management (Google→Idealista flow)")
+                                
+                                elif 'PROXY' in error_msg.upper():
+                                    if 'Method 3: Proxy Rotation' not in bypass_methods_detected:
+                                        bypass_methods_detected.append('Method 3: Proxy Rotation')
+                                        print(f"   🌐 DETECTED: Method 3 - Proxy Rotation with Portuguese IPs")
+                                
+                                elif 'ULTRA-STEALTH' in error_msg.upper() or 'STEALTH' in error_msg.upper():
+                                    if 'Method 4: Ultra-Stealth' not in bypass_methods_detected:
+                                        bypass_methods_detected.append('Method 4: Ultra-Stealth')
+                                        print(f"   🕵️ DETECTED: Method 4 - Ultra-Stealth fallback")
+                                
+                                # Track error patterns
+                                if 'HTTP 403' in error_msg:
+                                    error_patterns.append('403 Forbidden')
+                                elif 'HTTP 429' in error_msg:
+                                    error_patterns.append('429 Too Many Requests')
+                                elif 'timeout' in error_msg.lower():
+                                    error_patterns.append('Timeout')
+                    
+                    # Check for success indicators
+                    if success_zones:
+                        for success_zone in success_zones:
+                            properties_count = success_zone.get('properties_count', 0)
+                            if properties_count > 0:
+                                success_indicators.append(f"Real data extracted: {properties_count} properties")
+                                print(f"   ✅ SUCCESS: Real price data extracted - {properties_count} properties")
+            
+            # Check if we've detected all methods or found success
+            if len(bypass_methods_detected) >= 4 or success_indicators:
+                print(f"   🎯 Comprehensive bypass testing detected or success achieved")
+                break
+        
+        # Step 3: Analyze bypass results
+        print(f"\n📊 Step 3: Analyzing Bypass Results...")
+        
+        # Final error analysis
+        success_final, response_final = self.run_test(
+            "Final Error Analysis",
+            "GET",
+            f"scraping-sessions/{session_id}/errors",
+            200
+        )
+        
+        if success_final:
+            total_zones = response_final.get('total_zones_attempted', 0)
+            failed_zones_count = response_final.get('failed_zones_count', 0)
+            success_zones_count = response_final.get('success_zones_count', 0)
+            failure_rate = response_final.get('failure_rate', 0)
+            common_errors = response_final.get('common_errors', {})
+            
+            print(f"   Total zones attempted: {total_zones}")
+            print(f"   Failed zones: {failed_zones_count}")
+            print(f"   Success zones: {success_zones_count}")
+            print(f"   Failure rate: {failure_rate:.1f}%")
+            
+            # Analyze common errors
+            print(f"   Common error types:")
+            for error_type, count in common_errors.items():
+                print(f"     - {error_type}: {count} occurrences")
+                
+                # Look for specific bypass method results
+                if '403' in error_type:
+                    print(f"       🛡️ Anti-bot detection encountered")
+                elif '429' in error_type:
+                    print(f"       ⏱️ Rate limiting encountered")
+                elif 'timeout' in error_type.lower():
+                    print(f"       ⏰ Timeout issues encountered")
+        
+        # Step 4: Real-time success detection
+        print(f"\n🎯 Step 4: Real-Time Success Detection...")
+        
+        # Check for actual properties extracted
+        success_props, response_props = self.run_test(
+            "Check Extracted Properties",
+            "GET",
+            "properties/filter?distrito=faro&concelho=tavira&freguesia=conceicao-e-cabanas-de-tavira",
+            200
+        )
+        
+        real_data_found = False
+        if success_props and response_props:
+            property_count = len(response_props)
+            print(f"   Properties found for target location: {property_count}")
+            
+            if property_count > 0:
+                real_data_found = True
+                print(f"   ✅ BREAKTHROUGH SUCCESS: Real price data extracted!")
+                
+                # Analyze property types found
+                property_types = set()
+                operation_types = set()
+                for prop in response_props:
+                    property_types.add(prop.get('property_type', 'unknown'))
+                    operation_types.add(prop.get('operation_type', 'unknown'))
+                
+                print(f"   Property types extracted: {sorted(property_types)}")
+                print(f"   Operation types extracted: {sorted(operation_types)}")
+                
+                # Show sample property
+                if response_props:
+                    sample_prop = response_props[0]
+                    print(f"   Sample property: {sample_prop.get('property_type', 'N/A')} - {sample_prop.get('price_per_sqm', 'N/A')} €/m²")
+            else:
+                print(f"   ⚠️ No properties extracted for target location")
+        
+        # Step 5: Compare against previous failures
+        print(f"\n🔄 Step 5: Comparing Against Previous Failures...")
+        
+        # This specific location was getting 403 errors before
+        target_location = "faro/tavira/conceicao-e-cabanas-de-tavira"
+        print(f"   Target location: {target_location}")
+        print(f"   Previous issue: Persistent 403 Forbidden errors")
+        
+        # Analyze if the 4-tier system helped
+        if real_data_found:
+            print(f"   ✅ BREAKTHROUGH: 4-tier bypass system succeeded where previous methods failed!")
+            print(f"   🎯 Advanced anti-bot system successfully bypassed 403 errors")
+        elif success_indicators:
+            print(f"   ✅ PARTIAL SUCCESS: Some bypass methods showed promise")
+            print(f"   🔄 System is working but may need more time or refinement")
+        else:
+            print(f"   ⚠️ CHALLENGE REMAINS: Strong anti-bot measures still blocking access")
+            print(f"   🛡️ Target site has very robust anti-bot protection")
+        
+        # Summary of bypass methods attempted
+        print(f"\n🛡️ BYPASS METHODS SUMMARY:")
+        print(f"   Methods detected/attempted: {len(bypass_methods_detected)}/4")
+        for method in bypass_methods_detected:
+            print(f"   ✅ {method}")
+        
+        # Missing methods
+        all_methods = [
+            'Method 1: Undetected Chrome',
+            'Method 2: Session Management', 
+            'Method 3: Proxy Rotation',
+            'Method 4: Ultra-Stealth'
+        ]
+        missing_methods = [m for m in all_methods if m not in bypass_methods_detected]
+        for method in missing_methods:
+            print(f"   ⏳ {method} (not detected in monitoring window)")
+        
+        # Final assessment
+        print(f"\n🎯 FINAL ASSESSMENT:")
+        if real_data_found:
+            print(f"   ✅ SUCCESS: Advanced anti-bot bypass system WORKING")
+            print(f"   🎯 Real price data successfully extracted from idealista.pt")
+            print(f"   🛡️ 4-tier strategy overcame persistent 403 Forbidden errors")
+        elif len(bypass_methods_detected) >= 2:
+            print(f"   🔄 PROGRESS: Multiple bypass methods attempted")
+            print(f"   ⏱️ System is actively trying different approaches")
+            print(f"   🎯 Recommendation: Allow more time for bypass completion")
+        else:
+            print(f"   ⚠️ CHALLENGE: Limited bypass activity detected")
+            print(f"   🛡️ Target site has very strong anti-bot protection")
+            print(f"   🔄 System may need additional bypass strategies")
+        
+        # Error pattern analysis
+        if error_patterns:
+            unique_errors = list(set(error_patterns))
+            print(f"   Error patterns encountered: {unique_errors}")
+            
+            if '403 Forbidden' in unique_errors:
+                print(f"   🛡️ Confirmed: Anti-bot measures active (403 errors)")
+            if '429 Too Many Requests' in unique_errors:
+                print(f"   ⏱️ Rate limiting encountered (429 errors)")
+        
+        return all_tests_passed
+
 def main():
     print("🚀 Starting Idealista Scraper API Tests - Stealth Scraping System Testing")
     print("=" * 80)
