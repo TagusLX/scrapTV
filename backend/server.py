@@ -160,6 +160,404 @@ PORTUGUESE_STRUCTURE = {
     # Format: {distrito: {concelho: [freguesias...]}}
 }
 
+class HumanMimicScraper:
+    """Ultra-advanced human mimicking scraper with ML-based behavior patterns"""
+    
+    def __init__(self):
+        self.browsing_sessions = {}
+        self.human_patterns = self.load_human_patterns()
+        self.identity_pool = self.create_identity_pool()
+        self.current_identity = None
+        
+    def load_human_patterns(self):
+        """Load realistic human browsing patterns based on research"""
+        return {
+            'reading_speeds': {
+                'fast_reader': (0.8, 2.5),      # Words per second
+                'normal_reader': (2.5, 4.5),
+                'slow_reader': (4.5, 8.0)
+            },
+            'scroll_patterns': {
+                'scanner': {'speed': 'fast', 'pauses': 'few'},
+                'reader': {'speed': 'medium', 'pauses': 'many'},
+                'browser': {'speed': 'variable', 'pauses': 'random'}
+            },
+            'navigation_styles': {
+                'goal_oriented': {'direct_clicks': 0.8, 'back_button': 0.1},
+                'exploratory': {'direct_clicks': 0.4, 'back_button': 0.3},
+                'confused': {'direct_clicks': 0.2, 'back_button': 0.5}
+            },
+            'session_durations': {
+                'quick_lookup': (30, 120),      # seconds
+                'research_session': (300, 1800),
+                'deep_browsing': (1800, 3600)
+            }
+        }
+    
+    def create_identity_pool(self):
+        """Create pool of realistic Portuguese user identities"""
+        return [
+            {
+                'name': 'Portuguese_Home_Buyer_Lisboa',
+                'profile': 'young_professional',
+                'location': {'lat': 38.7223, 'lng': -9.1393},
+                'timezone': 'Europe/Lisbon',
+                'languages': ['pt-PT', 'en'],
+                'browsing_style': 'goal_oriented',
+                'reading_speed': 'normal_reader',
+                'devices': ['desktop_chrome', 'mobile_safari'],
+                'interests': ['real_estate', 'portugal_property', 'lisbon_apartments'],
+                'search_history': [
+                    'apartamentos Lisboa',
+                    'preços casas Portugal',
+                    'idealista portugal',
+                    'comprar casa lisboa'
+                ]
+            },
+            {
+                'name': 'Portuguese_Investor_Porto',
+                'profile': 'experienced_investor',
+                'location': {'lat': 41.1579, 'lng': -8.6291},
+                'timezone': 'Europe/Lisbon',
+                'languages': ['pt-PT', 'en', 'fr'],
+                'browsing_style': 'exploratory',
+                'reading_speed': 'fast_reader',
+                'devices': ['desktop_firefox', 'tablet_safari'],
+                'interests': ['investment_property', 'porto_real_estate', 'rental_yields'],
+                'search_history': [
+                    'investimento imobiliário Portugal',
+                    'rendas Porto',
+                    'imóveis para investir',
+                    'mercado imobiliário português'
+                ]
+            },
+            {
+                'name': 'Portuguese_Family_Seeker_Faro',
+                'profile': 'family_relocating',
+                'location': {'lat': 37.0194, 'lng': -7.9322},
+                'timezone': 'Europe/Lisbon',
+                'languages': ['pt-PT'],
+                'browsing_style': 'confused',
+                'reading_speed': 'slow_reader',
+                'devices': ['mobile_chrome', 'desktop_edge'],
+                'interests': ['family_homes', 'algarve_property', 'schools_portugal'],
+                'search_history': [
+                    'casas famílias Algarve',
+                    'morar no Algarve',
+                    'escolas Faro',
+                    'custo vida Portugal'
+                ]
+            }
+        ]
+    
+    async def assume_human_identity(self):
+        """Assume a complete human identity with consistent behavior"""
+        self.current_identity = random.choice(self.identity_pool)
+        
+        logger.info(f"🎭 Assuming identity: {self.current_identity['name']}")
+        logger.info(f"   Profile: {self.current_identity['profile']}")
+        logger.info(f"   Location: {self.current_identity['location']}")
+        logger.info(f"   Browsing style: {self.current_identity['browsing_style']}")
+        
+        return self.current_identity
+    
+    async def simulate_daily_human_routine(self, session_id):
+        """Simulate a full day of human browsing behavior before target scraping"""
+        identity = self.current_identity
+        if not identity:
+            identity = await self.assume_human_identity()
+        
+        logger.info(f"🌅 Simulating daily routine for {identity['name']}...")
+        
+        session = requests.Session()
+        
+        # Step 1: Morning routine - Check news/email (Portuguese sites)
+        morning_sites = [
+            'https://www.publico.pt/',
+            'https://www.rtp.pt/',
+            'https://www.sapo.pt/'
+        ]
+        
+        logger.info("☕ Morning browsing simulation...")
+        for site in morning_sites[:2]:  # Visit 2 news sites
+            try:
+                headers = self.get_human_headers(identity)
+                response = session.get(site, headers=headers, timeout=15)
+                
+                # Simulate reading time based on identity
+                reading_pattern = self.human_patterns['reading_speeds'][identity['reading_speed']]
+                reading_time = random.uniform(*reading_pattern) * 30  # 30 words average
+                
+                logger.info(f"   📖 Reading {site} for {reading_time:.1f}s")
+                await asyncio.sleep(reading_time)
+                
+            except Exception as e:
+                logger.warning(f"Morning site failed: {e}")
+        
+        # Step 2: Search behavior - Natural Google searches
+        logger.info("🔍 Natural search behavior simulation...")
+        google_searches = identity['search_history']
+        
+        for search_term in random.sample(google_searches, 2):
+            try:
+                search_url = f"https://www.google.pt/search?q={search_term.replace(' ', '+')}"
+                headers = self.get_human_headers(identity)
+                response = session.get(search_url, headers=headers, timeout=15)
+                
+                # Simulate search result browsing
+                await asyncio.sleep(random.uniform(3, 8))
+                
+                logger.info(f"   🔍 Searched: {search_term}")
+                
+            except Exception as e:
+                logger.warning(f"Search failed: {e}")
+        
+        # Step 3: Social media check (simulate)
+        logger.info("📱 Social media simulation...")
+        await asyncio.sleep(random.uniform(2, 5))
+        
+        # Step 4: Property browsing preparation
+        logger.info("🏠 Property browsing preparation...")
+        
+        # Visit property-related sites naturally
+        property_prep_sites = [
+            'https://www.idealista.pt/',
+            'https://www.imovirtual.com/',
+        ]
+        
+        for site in property_prep_sites:
+            try:
+                headers = self.get_human_headers(identity)
+                response = session.get(site, headers=headers, timeout=15)
+                
+                # Human-like homepage interaction
+                await self.simulate_homepage_interaction(session, site, identity)
+                
+                logger.info(f"   🏠 Visited {site} naturally")
+                
+            except Exception as e:
+                logger.warning(f"Property prep site failed: {e}")
+        
+        # Store session for later use
+        self.browsing_sessions[session_id] = session
+        
+        logger.info(f"✅ Daily routine completed for {identity['name']}")
+        return session
+    
+    def get_human_headers(self, identity):
+        """Generate ultra-realistic headers based on human identity"""
+        device = random.choice(identity['devices'])
+        
+        # Device-specific user agents
+        user_agents = {
+            'desktop_chrome': [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            ],
+            'desktop_firefox': [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0'
+            ],
+            'desktop_edge': [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0'
+            ],
+            'mobile_chrome': [
+                'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1'
+            ],
+            'mobile_safari': [
+                'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1'
+            ]
+        }
+        
+        user_agent = random.choice(user_agents.get(device, user_agents['desktop_chrome']))
+        
+        # Realistic accept headers based on device
+        accept_headers = {
+            'desktop': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'mobile': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
+        }
+        
+        device_type = 'mobile' if 'mobile' in device else 'desktop'
+        
+        # Language preferences based on identity
+        lang_strings = {
+            'pt-PT': 'pt-PT,pt;q=0.9,en;q=0.8',
+            'pt-PT+en': 'pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'pt-PT+en+fr': 'pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7,fr;q=0.6'
+        }
+        
+        languages = identity.get('languages', ['pt-PT'])
+        if 'fr' in languages:
+            lang_header = lang_strings['pt-PT+en+fr']
+        elif 'en' in languages:
+            lang_header = lang_strings['pt-PT+en']
+        else:
+            lang_header = lang_strings['pt-PT']
+        
+        headers = {
+            'User-Agent': user_agent,
+            'Accept': accept_headers[device_type],
+            'Accept-Language': lang_header,
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        
+        # Add realistic optional headers
+        if random.random() < 0.7:  # 70% chance
+            headers['Cache-Control'] = random.choice(['no-cache', 'max-age=0', 'no-store'])
+        
+        if 'chrome' in device.lower():
+            headers['sec-ch-ua'] = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"'
+            headers['sec-ch-ua-mobile'] = '?1' if 'mobile' in device else '?0'
+            headers['sec-ch-ua-platform'] = '"iOS"' if 'iPhone' in user_agent else '"Windows"'
+        
+        return headers
+    
+    async def simulate_homepage_interaction(self, session, site_url, identity):
+        """Simulate realistic homepage interactions"""
+        try:
+            # Human-like reading pause
+            reading_speed = self.human_patterns['reading_speeds'][identity['reading_speed']]
+            reading_time = random.uniform(*reading_speed) * 20  # 20 words on homepage
+            
+            await asyncio.sleep(reading_time)
+            
+            # Simulate random clicks/navigation based on browsing style
+            browsing_style = identity['browsing_style']
+            nav_pattern = self.human_patterns['navigation_styles'][browsing_style]
+            
+            # Simulate sub-page visits based on style
+            if random.random() < nav_pattern['direct_clicks']:
+                # Visit a sub-page
+                sub_pages = [
+                    '/comprar-casas/',
+                    '/arrendar-casas/',
+                    '/comprar-casas/lisboa/',
+                    '/comprar-casas/porto/'
+                ]
+                
+                sub_page = random.choice(sub_pages)
+                sub_url = site_url.rstrip('/') + sub_page
+                
+                try:
+                    headers = self.get_human_headers(identity)
+                    response = session.get(sub_url, headers=headers, timeout=15)
+                    
+                    # More reading time for sub-pages
+                    sub_reading_time = random.uniform(*reading_speed) * 40
+                    await asyncio.sleep(sub_reading_time)
+                    
+                    logger.info(f"   📄 Sub-page visited: {sub_page}")
+                    
+                except Exception as e:
+                        logger.warning(f"Sub-page visit failed: {e}")
+            
+            # Simulate back button usage
+            if random.random() < nav_pattern['back_button']:
+                await asyncio.sleep(random.uniform(1, 3))
+                logger.info(f"   ⬅️ Back button simulation")
+            
+        except Exception as e:
+            logger.warning(f"Homepage interaction failed: {e}")
+    
+    async def smart_delay_system(self, request_count):
+        """Ultra-intelligent delay system based on human behavior patterns"""
+        identity = self.current_identity
+        
+        # Base delay varies by time of day (simulate human schedule)
+        import datetime
+        current_hour = datetime.datetime.now().hour
+        
+        if 9 <= current_hour <= 12:  # Morning work hours
+            base_delay = random.uniform(8, 15)
+            logger.info("🌅 Morning browsing pace")
+        elif 13 <= current_hour <= 18:  # Afternoon work hours  
+            base_delay = random.uniform(5, 12)
+            logger.info("🌞 Afternoon browsing pace")
+        elif 19 <= current_hour <= 23:  # Evening leisure
+            base_delay = random.uniform(10, 25)
+            logger.info("🌙 Evening leisure pace")
+        else:  # Night time (very slow)
+            base_delay = random.uniform(20, 45)
+            logger.info("🌜 Night time browsing (very slow)")
+        
+        # Adjust based on browsing style
+        if identity:
+            style = identity['browsing_style']
+            if style == 'goal_oriented':
+                base_delay *= 0.7  # Faster
+            elif style == 'exploratory':
+                base_delay *= 1.0  # Normal
+            elif style == 'confused':
+                base_delay *= 1.5  # Slower
+        
+        # Progressive fatigue (humans get slower over time)
+        if request_count > 5:
+            fatigue_factor = 1 + (request_count - 5) * 0.1
+            base_delay *= fatigue_factor
+            logger.info(f"😴 Human fatigue factor: {fatigue_factor:.2f}")
+        
+        # Random human interruptions
+        if random.random() < 0.15:  # 15% chance of interruption
+            interruption_time = random.uniform(30, 180)  # 30s to 3min
+            logger.info(f"☕ Human interruption: {interruption_time:.1f}s (coffee/phone/etc)")
+            await asyncio.sleep(interruption_time)
+        
+        logger.info(f"⏱️ Smart human delay: {base_delay:.1f}s")
+        await asyncio.sleep(base_delay)
+
+# Enhanced ultra-stealth scraper with human mimicking
+class HumanizedUltraStealthScraper:
+    """Combines ultra-stealth with human mimicking for maximum anonymity"""
+    
+    def __init__(self):
+        self.human_mimic = HumanMimicScraper()
+        self.session_request_count = 0
+        
+    async def human_like_scraping_session(self, url, session_id):
+        """Complete human-like scraping session from start to finish"""
+        try:
+            # Step 1: Assume human identity
+            identity = await self.human_mimic.assume_human_identity()
+            
+            # Step 2: Simulate full daily routine
+            human_session = await self.human_mimic.simulate_daily_human_routine(session_id)
+            
+            # Step 3: Smart delay before target access
+            self.session_request_count += 1
+            await self.human_mimic.smart_delay_system(self.session_request_count)
+            
+            # Step 4: Access target with established human session
+            logger.info(f"🎯 Accessing target URL with established human session: {url}")
+            
+            headers = self.human_mimic.get_human_headers(identity)
+            response = human_session.get(url, headers=headers, timeout=20)
+            
+            if response.status_code == 200:
+                logger.info(f"✅ HUMAN SESSION SUCCESS: Got 200 response")
+                
+                # Simulate human reading behavior on target page
+                reading_speed = self.human_mimic.human_patterns['reading_speeds'][identity['reading_speed']]
+                reading_time = random.uniform(*reading_speed) * 50  # 50 words for property page
+                
+                logger.info(f"📖 Human reading simulation: {reading_time:.1f}s")
+                await asyncio.sleep(reading_time)
+                
+                return response.text
+                
+            else:
+                logger.warning(f"Human session got {response.status_code}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Human-like session failed: {e}")
+            return None
+
+# Initialize humanized scraper
+humanized_scraper = HumanizedUltraStealthScraper()
+
 class ProxyRotationScraper:
     """Advanced scraper with residential proxy rotation and session management"""
     
