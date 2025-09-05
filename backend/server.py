@@ -1816,128 +1816,151 @@ class IdealistaScraper:
             logger.info(f"🕵️ Stealth scraping {property_type} from: {url}")
             
             try:
-                # ADVANCED ANTI-BOT BYPASS STRATEGY
+                # ULTRA-ADVANCED HUMAN MIMICKING ANTI-BOT SYSTEM
                 average_price_per_sqm = None
                 real_data_found = False
                 scraping_error = None
                 
-                logger.info(f"🛡️ Attempting ADVANCED ANTI-BOT BYPASS for {property_type}")
+                logger.info(f"🧠 Attempting HUMAN MIMICKING BYPASS for {property_type}")
                 
-                # Strategy 1: Try Undetected Chrome (most advanced)
+                # NEW Strategy 0: Full Human Mimicking Session (most advanced)
                 try:
-                    logger.info("🤖 Trying Method 1: Undetected Chrome...")
-                    if await undetected_scraper.setup_undetected_chrome():
-                        undetected_scraper.driver.get(url)
-                        await asyncio.sleep(random.uniform(8, 15))
-                        
-                        page_source = undetected_scraper.driver.page_source
-                        zone_price, extraction_error = stealth_scraper.extract_zone_price(page_source, url)
+                    logger.info("🎭 Method 0: Full Human Mimicking Session...")
+                    
+                    human_session_key = f"human_{session_id}_{property_type}"
+                    page_content = await humanized_scraper.human_like_scraping_session(url, human_session_key)
+                    
+                    if page_content:
+                        zone_price, extraction_error = stealth_scraper.extract_zone_price(page_content, url)
                         
                         if zone_price:
                             average_price_per_sqm = zone_price
                             real_data_found = True
-                            logger.info(f"✅ UNDETECTED CHROME SUCCESS: {average_price_per_sqm:.2f} €/m²")
+                            logger.info(f"✅ HUMAN MIMICKING SUCCESS: {average_price_per_sqm:.2f} €/m² (bypassed all detection)")
                         else:
-                            logger.warning(f"Undetected Chrome - no price found: {extraction_error}")
-                        
-                        undetected_scraper.driver.quit()
-                except Exception as undetected_e:
-                    logger.warning(f"Undetected Chrome failed: {undetected_e}")
+                            logger.warning(f"Human mimicking - page accessed but no price found: {extraction_error}")
+                    else:
+                        logger.warning("Human mimicking - failed to access page")
+                except Exception as human_e:
+                    logger.warning(f"Human mimicking failed: {human_e}")
                 
-                # Strategy 2: Try Session-based approach with realistic browsing
+                # If human mimicking fails, try previous 4-tier strategy
                 if not real_data_found:
+                    # Strategy 1: Try Undetected Chrome (most advanced)
                     try:
-                        logger.info("🍪 Trying Method 2: Realistic Session Management...")
-                        session_id = f"session_{random.randint(1000, 9999)}"
-                        realistic_session = await session_manager.create_realistic_session(session_id)
-                        
-                        if realistic_session:
-                            # Make request with established session
-                            headers = stealth_scraper.get_natural_headers()
-                            response = realistic_session.get(url, headers=headers, timeout=15)
+                        logger.info("🤖 Method 1: Undetected Chrome...")
+                        if await undetected_scraper.setup_undetected_chrome():
+                            undetected_scraper.driver.get(url)
+                            await asyncio.sleep(random.uniform(8, 15))
                             
-                            if response.status_code == 200:
-                                zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
-                                
-                                if zone_price:
-                                    average_price_per_sqm = zone_price
-                                    real_data_found = True
-                                    logger.info(f"✅ SESSION-BASED SUCCESS: {average_price_per_sqm:.2f} €/m²")
-                                else:
-                                    logger.warning(f"Session-based - no price found: {extraction_error}")
-                            elif response.status_code == 403:
-                                logger.warning("Session-based approach also got 403 - trying proxies...")
-                            else:
-                                logger.warning(f"Session-based got HTTP {response.status_code}")
-                                
-                    except Exception as session_e:
-                        logger.warning(f"Session-based approach failed: {session_e}")
-                
-                # Strategy 3: Try proxy rotation (if other methods fail)
-                if not real_data_found:
-                    try:
-                        logger.info("🌐 Trying Method 3: Proxy Rotation...")
-                        await proxy_scraper.fetch_fresh_proxies()
-                        
-                        # Try multiple proxies
-                        for attempt in range(min(3, len(proxy_scraper.working_proxies))):
-                            proxy = proxy_scraper.get_next_proxy()
-                            if not proxy:
-                                break
-                                
-                            logger.info(f"Testing proxy {attempt + 1}: {proxy}")
-                            if await proxy_scraper.test_proxy(proxy):
-                                try:
-                                    proxies = {
-                                        'http': f'http://{proxy}',
-                                        'https': f'http://{proxy}'
-                                    }
-                                    
-                                    headers = stealth_scraper.get_natural_headers()
-                                    response = requests.get(url, proxies=proxies, headers=headers, timeout=15)
-                                    
-                                    if response.status_code == 200:
-                                        zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
-                                        
-                                        if zone_price:
-                                            average_price_per_sqm = zone_price
-                                            real_data_found = True
-                                            logger.info(f"✅ PROXY SUCCESS with {proxy}: {average_price_per_sqm:.2f} €/m²")
-                                            break
-                                    elif response.status_code == 403:
-                                        logger.warning(f"Proxy {proxy} also blocked with 403")
-                                    
-                                except Exception as proxy_req_e:
-                                    logger.warning(f"Proxy {proxy} request failed: {proxy_req_e}")
-                                    continue
-                                    
-                    except Exception as proxy_e:
-                        logger.warning(f"Proxy rotation failed: {proxy_e}")
-                
-                # Strategy 4: Fallback to ultra-stealth (existing method)
-                if not real_data_found:
-                    logger.info("🕵️ Fallback: Ultra-Stealth Method...")
-                    try:
-                        page_source = await ultra_stealth_scraper.ultra_stealth_get(url)
-                        
-                        if page_source:
-                            zone_price, extraction_error = ultra_stealth_scraper.extract_zone_price_from_selenium(url)
+                            page_source = undetected_scraper.driver.page_source
+                            zone_price, extraction_error = stealth_scraper.extract_zone_price(page_source, url)
                             
                             if zone_price:
                                 average_price_per_sqm = zone_price
                                 real_data_found = True
-                                logger.info(f"✅ ULTRA-STEALTH FALLBACK SUCCESS: {average_price_per_sqm:.2f} €/m²")
+                                logger.info(f"✅ UNDETECTED CHROME SUCCESS: {average_price_per_sqm:.2f} €/m²")
                             else:
-                                scraping_error = extraction_error or "No price data found with ultra-stealth method"
-                        else:
-                            scraping_error = "Ultra-stealth page retrieval failed"
+                                logger.warning(f"Undetected Chrome - no price found: {extraction_error}")
                             
-                    except Exception as ultra_e:
-                        scraping_error = f"All advanced methods failed: {str(ultra_e)}"
+                            undetected_scraper.driver.quit()
+                    except Exception as undetected_e:
+                        logger.warning(f"Undetected Chrome failed: {undetected_e}")
+                    
+                    # Strategy 2: Try Session-based approach with realistic browsing
+                    if not real_data_found:
+                        try:
+                            logger.info("🍪 Method 2: Realistic Session Management...")
+                            session_id_temp = f"session_{random.randint(1000, 9999)}"
+                            realistic_session = await session_manager.create_realistic_session(session_id_temp)
+                            
+                            if realistic_session:
+                                # Make request with established session
+                                headers = stealth_scraper.get_natural_headers()
+                                response = realistic_session.get(url, headers=headers, timeout=15)
+                                
+                                if response.status_code == 200:
+                                    zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
+                                    
+                                    if zone_price:
+                                        average_price_per_sqm = zone_price
+                                        real_data_found = True
+                                        logger.info(f"✅ SESSION-BASED SUCCESS: {average_price_per_sqm:.2f} €/m²")
+                                    else:
+                                        logger.warning(f"Session-based - no price found: {extraction_error}")
+                                elif response.status_code == 403:
+                                    logger.warning("Session-based approach also got 403 - trying proxies...")
+                                else:
+                                    logger.warning(f"Session-based got HTTP {response.status_code}")
+                                    
+                        except Exception as session_e:
+                            logger.warning(f"Session-based approach failed: {session_e}")
+                    
+                    # Strategy 3: Try proxy rotation (if other methods fail)
+                    if not real_data_found:
+                        try:
+                            logger.info("🌐 Method 3: Proxy Rotation...")
+                            await proxy_scraper.fetch_fresh_proxies()
+                            
+                            # Try multiple proxies
+                            for attempt in range(min(3, len(proxy_scraper.working_proxies))):
+                                proxy = proxy_scraper.get_next_proxy()
+                                if not proxy:
+                                    break
+                                    
+                                logger.info(f"Testing proxy {attempt + 1}: {proxy}")
+                                if await proxy_scraper.test_proxy(proxy):
+                                    try:
+                                        proxies = {
+                                            'http': f'http://{proxy}',
+                                            'https': f'http://{proxy}'
+                                        }
+                                        
+                                        headers = stealth_scraper.get_natural_headers()
+                                        response = requests.get(url, proxies=proxies, headers=headers, timeout=15)
+                                        
+                                        if response.status_code == 200:
+                                            zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
+                                            
+                                            if zone_price:
+                                                average_price_per_sqm = zone_price
+                                                real_data_found = True
+                                                logger.info(f"✅ PROXY SUCCESS with {proxy}: {average_price_per_sqm:.2f} €/m²")
+                                                break
+                                        elif response.status_code == 403:
+                                            logger.warning(f"Proxy {proxy} also blocked with 403")
+                                        
+                                    except Exception as proxy_req_e:
+                                        logger.warning(f"Proxy {proxy} request failed: {proxy_req_e}")
+                                        continue
+                                        
+                        except Exception as proxy_e:
+                            logger.warning(f"Proxy rotation failed: {proxy_e}")
+                    
+                    # Strategy 4: Fallback to ultra-stealth (existing method)
+                    if not real_data_found:
+                        logger.info("🕵️ Method 4: Ultra-Stealth Fallback...")
+                        try:
+                            page_source = await ultra_stealth_scraper.ultra_stealth_get(url)
+                            
+                            if page_source:
+                                zone_price, extraction_error = ultra_stealth_scraper.extract_zone_price_from_selenium(url)
+                                
+                                if zone_price:
+                                    average_price_per_sqm = zone_price
+                                    real_data_found = True
+                                    logger.info(f"✅ ULTRA-STEALTH FALLBACK SUCCESS: {average_price_per_sqm:.2f} €/m²")
+                                else:
+                                    scraping_error = extraction_error or "No price data found with ultra-stealth method"
+                            else:
+                                scraping_error = "Ultra-stealth page retrieval failed"
+                                
+                        except Exception as ultra_e:
+                            scraping_error = f"All 5 advanced bypass methods failed: {str(ultra_e)}"
                 
-                # If all advanced methods fail, set comprehensive error
+                # If all 5 advanced methods fail, set comprehensive error
                 if not real_data_found and not scraping_error:
-                    scraping_error = "All anti-bot bypass methods failed: Undetected Chrome, Session Management, Proxy Rotation, and Ultra-Stealth all blocked by site"
+                    scraping_error = "All advanced anti-bot bypass methods failed: Human Mimicking, Undetected Chrome, Session Management, Proxy Rotation, and Ultra-Stealth all blocked by sophisticated anti-bot protection"
                 
                 # Create property entry ONLY if we have real scraped data
                 if real_data_found and average_price_per_sqm and average_price_per_sqm > 0:
