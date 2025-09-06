@@ -2926,7 +2926,7 @@ async def get_captcha_image(session_id: str):
 
 @api_router.post("/captcha/{session_id}/solve")
 async def solve_captcha_endpoint(session_id: str, solution: CaptchaSolution):
-    """Submit CAPTCHA solution"""
+    """Submit CAPTCHA solution for Anonymous Beautiful Soup scraper"""
     session = await db.scraping_sessions.find_one({"id": session_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -2935,8 +2935,12 @@ async def solve_captcha_endpoint(session_id: str, solution: CaptchaSolution):
         raise HTTPException(status_code=400, detail="Session is not waiting for CAPTCHA")
     
     try:
-        # Try to solve CAPTCHA using Selenium
-        if scraper.driver and scraper.solve_captcha(session_id, solution.solution):
+        logger.info(f"🔓 Solving CAPTCHA for session {session_id} with solution: {solution.solution}")
+        
+        # Use Anonymous Beautiful Soup scraper to solve CAPTCHA
+        success, message = await anonymous_scraper.solve_captcha(solution.solution)
+        
+        if success:
             # Update session to continue scraping
             await db.scraping_sessions.update_one(
                 {"id": session_id},
@@ -2946,9 +2950,11 @@ async def solve_captcha_endpoint(session_id: str, solution: CaptchaSolution):
                     "current_url": None
                 }}
             )
-            return {"message": "CAPTCHA solved successfully"}
+            logger.info(f"✅ CAPTCHA solved successfully for session {session_id}")
+            return {"message": "CAPTCHA solved successfully", "success": True}
         else:
-            return {"message": "Failed to solve CAPTCHA", "success": False}
+            logger.warning(f"❌ Failed to solve CAPTCHA for session {session_id}: {message}")
+            return {"message": f"Failed to solve CAPTCHA: {message}", "success": False}
             
     except Exception as e:
         logger.error(f"Error solving CAPTCHA: {e}")
