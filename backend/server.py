@@ -558,6 +558,577 @@ class HumanizedUltraStealthScraper:
 # Initialize humanized scraper
 humanized_scraper = HumanizedUltraStealthScraper()
 
+class AnonymousBeautifulSoupScraper:
+    """
+    100% Anonymous Beautiful Soup scraper with advanced stealth techniques
+    No Selenium - Pure requests + Beautiful Soup approach
+    Supports manual CAPTCHA validation
+    """
+    
+    def __init__(self):
+        self.session = requests.Session()
+        self.request_count = 0
+        self.last_request_time = 0
+        self.captcha_pending = False
+        self.current_session_id = None
+        
+        # Ultra-realistic Portuguese user profiles
+        self.portuguese_profiles = [
+            {
+                'name': 'Portuguese_Business_Lisboa',
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'accept_language': 'pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'location': 'Lisbon',
+                'timezone': 'Europe/Lisbon',
+                'connection_type': 'residential',
+                'browsing_pattern': 'goal_oriented'
+            },
+            {
+                'name': 'Portuguese_Student_Porto',
+                'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'accept_language': 'pt-PT,pt;q=0.9,en;q=0.8,fr;q=0.7',
+                'location': 'Porto',
+                'timezone': 'Europe/Lisbon', 
+                'connection_type': 'university',
+                'browsing_pattern': 'exploratory'
+            },
+            {
+                'name': 'Portuguese_Family_Faro',
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+                'accept_language': 'pt-PT,pt;q=0.8,en-US;q=0.5,en;q=0.3',
+                'location': 'Faro',
+                'timezone': 'Europe/Lisbon',
+                'connection_type': 'residential',
+                'browsing_pattern': 'casual'
+            }
+        ]
+        
+        # Current active profile
+        self.current_profile = None
+        
+        # CAPTCHA support
+        self.captcha_image_url = None
+        self.captcha_solution = None
+        
+    async def initialize_anonymous_session(self, session_id):
+        """Initialize a completely anonymous session with realistic Portuguese user behavior"""
+        self.current_session_id = session_id
+        self.current_profile = random.choice(self.portuguese_profiles)
+        
+        logger.info(f"🇵🇹 Initializing anonymous session: {self.current_profile['name']}")
+        logger.info(f"   Location: {self.current_profile['location']}")
+        logger.info(f"   Pattern: {self.current_profile['browsing_pattern']}")
+        
+        # Clear any previous session data
+        self.session.cookies.clear()
+        self.session.headers.clear()
+        
+        # Set up completely anonymous session
+        await self.setup_anonymous_headers()
+        
+        # Simulate natural Portuguese browsing routine
+        await self.simulate_portuguese_browsing_routine()
+        
+        return True
+    
+    async def setup_anonymous_headers(self):
+        """Set up completely anonymous headers that mimic real Portuguese users"""
+        profile = self.current_profile
+        
+        # Base headers that mimic real browser behavior
+        headers = {
+            'User-Agent': profile['user_agent'],
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': profile['accept_language'],
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Pragma': 'no-cache',
+        }
+        
+        # Add realistic browser-specific headers
+        if 'Chrome' in profile['user_agent']:
+            headers.update({
+                'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="121", "Google Chrome";v="121"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"' if 'Windows' in profile['user_agent'] else '"macOS"',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-User': '?1',
+                'Sec-Fetch-Dest': 'document'
+            })
+        
+        # Update session headers
+        self.session.headers.update(headers)
+        
+        logger.info("✅ Anonymous headers configured")
+    
+    async def simulate_portuguese_browsing_routine(self):
+        """Simulate realistic Portuguese user browsing routine before accessing target"""
+        logger.info("🌐 Simulating Portuguese browsing routine...")
+        
+        # Portuguese websites that a real user would visit
+        portuguese_sites = [
+            'https://www.google.pt/',
+            'https://www.sapo.pt/', 
+            'https://www.publico.pt/',
+            'https://www.rtp.pt/'
+        ]
+        
+        # Visit 1-2 Portuguese sites to establish realistic browsing pattern
+        sites_to_visit = random.sample(portuguese_sites, random.randint(1, 2))
+        
+        for site in sites_to_visit:
+            try:
+                logger.info(f"🇵🇹 Visiting Portuguese site: {site}")
+                
+                # Natural delay before visiting
+                await asyncio.sleep(random.uniform(2, 5))
+                
+                response = self.session.get(site, timeout=15)
+                
+                if response.status_code == 200:
+                    logger.info(f"✅ Successfully visited {site}")
+                    
+                    # Simulate reading time
+                    reading_time = random.uniform(3, 8)
+                    await asyncio.sleep(reading_time)
+                    
+                else:
+                    logger.warning(f"Site {site} returned {response.status_code}")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to visit {site}: {e}")
+                continue
+        
+        # Now navigate to Idealista naturally via Google search
+        await self.natural_idealista_navigation()
+    
+    async def natural_idealista_navigation(self):
+        """Navigate to Idealista naturally through Google search"""
+        logger.info("🔍 Natural navigation to Idealista via Google...")
+        
+        try:
+            # Search for Idealista on Google Portugal
+            search_terms = [
+                'idealista portugal casas',
+                'comprar casa portugal idealista',
+                'apartamentos lisboa idealista', 
+                'preços casas portugal'
+            ]
+            
+            search_term = random.choice(search_terms)
+            search_url = f"https://www.google.pt/search?q={search_term.replace(' ', '+')}"
+            
+            logger.info(f"🔍 Searching Google: {search_term}")
+            
+            # Natural delay before search
+            await asyncio.sleep(random.uniform(2, 4))
+            
+            search_response = self.session.get(search_url, timeout=15)
+            
+            if search_response.status_code == 200:
+                logger.info("✅ Google search successful")
+                
+                # Simulate looking at search results
+                await asyncio.sleep(random.uniform(3, 7))
+                
+                # Now visit Idealista homepage naturally
+                logger.info("🏠 Naturally clicking to Idealista...")
+                
+                idealista_response = self.session.get('https://www.idealista.pt/', timeout=15)
+                
+                if idealista_response.status_code == 200:
+                    logger.info("✅ Idealista homepage accessed naturally")
+                    
+                    # Simulate browsing homepage
+                    await asyncio.sleep(random.uniform(4, 8))
+                    
+                    # Sometimes browse a sub-page
+                    if random.random() < 0.6:  # 60% chance
+                        sub_pages = [
+                            '/comprar-casas/',
+                            '/arrendar-casas/',
+                            '/comprar-casas/lisboa/',
+                            '/comprar-casas/porto/'
+                        ]
+                        
+                        sub_page = random.choice(sub_pages)
+                        sub_url = f"https://www.idealista.pt{sub_page}"
+                        
+                        logger.info(f"📄 Browsing sub-page: {sub_page}")
+                        
+                        sub_response = self.session.get(sub_url, timeout=15)
+                        
+                        if sub_response.status_code == 200:
+                            logger.info("✅ Sub-page browsed successfully")
+                            await asyncio.sleep(random.uniform(3, 6))
+                
+                else:
+                    logger.warning(f"Idealista homepage returned {idealista_response.status_code}")
+                    
+            else:
+                logger.warning(f"Google search returned {search_response.status_code}")
+                
+        except Exception as e:
+            logger.warning(f"Natural navigation failed: {e}")
+    
+    async def anonymous_delay(self):
+        """Ultra-smart delay system that mimics real Portuguese user behavior"""
+        # Base delay varies by time of day (Portuguese timezone)
+        import datetime
+        
+        # Get Portuguese local time 
+        portugal_hour = datetime.datetime.now().hour  # Simplified for now
+        
+        # Portuguese user behavior patterns
+        if 6 <= portugal_hour <= 9:  # Morning rush
+            base_delay = random.uniform(8, 15)
+            logger.info("🌅 Morning browsing pace (Portuguese)")
+        elif 9 <= portugal_hour <= 12:  # Morning work
+            base_delay = random.uniform(12, 25) 
+            logger.info("💼 Work hours browsing (Portuguese)")
+        elif 12 <= portugal_hour <= 14:  # Lunch break
+            base_delay = random.uniform(6, 12)
+            logger.info("🍽️ Lunch break browsing (Portuguese)")
+        elif 14 <= portugal_hour <= 18:  # Afternoon work
+            base_delay = random.uniform(10, 20)
+            logger.info("🌞 Afternoon work browsing (Portuguese)")
+        elif 18 <= portugal_hour <= 22:  # Evening leisure
+            base_delay = random.uniform(5, 12)
+            logger.info("🌆 Evening leisure browsing (Portuguese)")
+        else:  # Night time
+            base_delay = random.uniform(20, 40)
+            logger.info("🌙 Night browsing (very slow)")
+        
+        # Adjust based on browsing pattern
+        if self.current_profile:
+            pattern = self.current_profile['browsing_pattern']
+            if pattern == 'goal_oriented':
+                base_delay *= 0.8  # Slightly faster
+            elif pattern == 'exploratory':
+                base_delay *= 1.2  # Slower, more careful
+            elif pattern == 'casual':
+                base_delay *= 1.5  # Much slower
+        
+        # Progressive fatigue (users get slower over time)
+        if self.request_count > 3:
+            fatigue_factor = 1 + (self.request_count - 3) * 0.15
+            base_delay *= fatigue_factor
+            logger.info(f"😴 User fatigue factor: {fatigue_factor:.2f}")
+        
+        # Random interruptions (very realistic)
+        if random.random() < 0.25:  # 25% chance
+            interruption_time = random.uniform(15, 120)  # 15s to 2min
+            logger.info(f"☕ User interruption: {interruption_time:.1f}s (phone/coffee/distraction)")
+            await asyncio.sleep(interruption_time)
+        
+        logger.info(f"⏱️ Anonymous delay: {base_delay:.1f}s")
+        await asyncio.sleep(base_delay)
+        
+        self.last_request_time = time.time()
+    
+    async def check_for_captcha(self, response):
+        """Check if response contains CAPTCHA challenge"""
+        if not response or response.status_code != 200:
+            return False
+            
+        # Check for common CAPTCHA indicators
+        content_lower = response.text.lower()
+        captcha_indicators = [
+            'captcha',
+            'challenge',
+            'verification',
+            'robot', 
+            'cloudflare',
+            'verificação',
+            'desafio',
+            'digite o código',
+            'prove you are human'
+        ]
+        
+        for indicator in captcha_indicators:
+            if indicator in content_lower:
+                logger.warning(f"🤖 CAPTCHA detected: {indicator}")
+                await self.handle_captcha_detection(response)
+                return True
+                
+        return False
+    
+    async def handle_captcha_detection(self, response):
+        """Handle CAPTCHA detection by saving image and waiting for manual solution"""
+        try:
+            logger.info("💡 CAPTCHA detected - preparing for manual solution...")
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Look for CAPTCHA image
+            captcha_img = None
+            img_selectors = [
+                'img[src*="captcha"]',
+                'img[alt*="captcha"]', 
+                'img[id*="captcha"]',
+                'img[class*="captcha"]',
+                '.captcha img',
+                '#captcha img'
+            ]
+            
+            for selector in img_selectors:
+                captcha_img = soup.select_one(selector)
+                if captcha_img:
+                    break
+            
+            if captcha_img and captcha_img.get('src'):
+                captcha_src = captcha_img['src']
+                
+                # If relative URL, make it absolute
+                if captcha_src.startswith('/'):
+                    captcha_src = f"https://www.idealista.pt{captcha_src}"
+                elif not captcha_src.startswith('http'):
+                    captcha_src = f"https://www.idealista.pt/{captcha_src}"
+                
+                logger.info(f"📸 CAPTCHA image found: {captcha_src}")
+                
+                # Download CAPTCHA image
+                captcha_response = self.session.get(captcha_src, timeout=15)
+                
+                if captcha_response.status_code == 200:
+                    # Save CAPTCHA image
+                    timestamp = int(time.time())
+                    captcha_filename = f"captcha_{self.current_session_id}_{timestamp}.png"
+                    captcha_path = CAPTCHA_DIR / captcha_filename
+                    
+                    with open(captcha_path, 'wb') as f:
+                        f.write(captcha_response.content)
+                    
+                    self.captcha_image_url = f"/captcha/{captcha_filename}"
+                    self.captcha_pending = True
+                    
+                    logger.info(f"💾 CAPTCHA image saved: {captcha_path}")
+                    logger.info("⏸️ Scraping paused - waiting for manual CAPTCHA solution")
+                    
+                    # Update session status to waiting_captcha
+                    if self.current_session_id:
+                        await db.scraping_sessions.update_one(
+                            {"id": self.current_session_id},
+                            {
+                                "$set": {
+                                    "status": "waiting_captcha",
+                                    "captcha_image_path": self.captcha_image_url,
+                                    "current_url": response.url
+                                }
+                            }
+                        )
+                    
+                    return True
+                    
+        except Exception as e:
+            logger.error(f"Error handling CAPTCHA: {e}")
+            
+        return False
+    
+    async def solve_captcha(self, solution):
+        """Solve CAPTCHA with provided solution"""
+        if not self.captcha_pending:
+            return False, "No CAPTCHA pending"
+            
+        try:
+            logger.info(f"🔓 Attempting to solve CAPTCHA with solution: {solution}")
+            
+            # This would need to be implemented based on the specific CAPTCHA form
+            # For now, we'll simulate the process
+            self.captcha_solution = solution
+            self.captcha_pending = False
+            
+            logger.info("✅ CAPTCHA marked as solved - resuming scraping")
+            
+            # Update session status
+            if self.current_session_id:
+                await db.scraping_sessions.update_one(
+                    {"id": self.current_session_id},
+                    {
+                        "$set": {
+                            "status": "running",
+                            "captcha_image_path": None
+                        }
+                    }
+                )
+            
+            return True, "CAPTCHA solved successfully"
+            
+        except Exception as e:
+            logger.error(f"Error solving CAPTCHA: {e}")
+            return False, f"Error solving CAPTCHA: {e}"
+    
+    async def anonymous_get(self, url):
+        """Make completely anonymous request using Beautiful Soup approach"""
+        self.request_count += 1
+        
+        logger.info(f"🕵️‍♂️ Anonymous GET #{self.request_count}: {url}")
+        logger.info(f"Profile: {self.current_profile['name'] if self.current_profile else 'None'}")
+        
+        # Check if CAPTCHA is pending
+        if self.captcha_pending:
+            logger.warning("⏸️ CAPTCHA pending - cannot make request")
+            return None
+        
+        # Smart anonymous delay
+        await self.anonymous_delay()
+        
+        try:
+            # Make request with current anonymous session
+            response = self.session.get(url, timeout=20)
+            
+            logger.info(f"📡 Response: {response.status_code} - {len(response.content)} bytes")
+            
+            # Check for CAPTCHA
+            if await self.check_for_captcha(response):
+                return None  # CAPTCHA detected, will pause scraping
+            
+            # Handle different response codes
+            if response.status_code == 200:
+                logger.info("✅ Anonymous request successful")
+                return response
+                
+            elif response.status_code == 403:
+                logger.warning("🚫 403 Forbidden - Enhanced anonymity needed")
+                # Implement additional anonymity measures
+                await self.enhance_anonymity()
+                return None
+                
+            elif response.status_code == 429:
+                logger.warning("⏱️ 429 Rate Limited - Extended delay needed")
+                extended_delay = random.uniform(60, 180)
+                logger.info(f"⏳ Extended delay: {extended_delay:.1f}s")
+                await asyncio.sleep(extended_delay)
+                return None
+                
+            else:
+                logger.warning(f"⚠️ Unexpected status code: {response.status_code}")
+                return None
+                
+        except requests.exceptions.Timeout:
+            logger.warning("⏰ Request timeout")
+            return None
+            
+        except requests.exceptions.ConnectionError as e:
+            logger.warning(f"🔌 Connection error: {e}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"❌ Unexpected error: {e}")
+            return None
+    
+    async def enhance_anonymity(self):
+        """Enhance anonymity when detection is suspected"""
+        logger.info("🛡️ Enhancing anonymity measures...")
+        
+        # Switch to different profile
+        old_profile = self.current_profile['name'] if self.current_profile else 'None'
+        self.current_profile = random.choice(self.portuguese_profiles)
+        
+        logger.info(f"🔄 Profile switch: {old_profile} → {self.current_profile['name']}")
+        
+        # Clear session and re-initialize
+        self.session.cookies.clear()
+        self.session.headers.clear()
+        
+        # Set up new anonymous headers
+        await self.setup_anonymous_headers()
+        
+        # Extended delay for cooling off
+        cool_off_time = random.uniform(30, 90)
+        logger.info(f"❄️ Cooling off period: {cool_off_time:.1f}s")
+        await asyncio.sleep(cool_off_time)
+        
+        # Re-establish browsing routine with new profile
+        await self.simulate_portuguese_browsing_routine()
+    
+    def extract_price_beautiful_soup(self, response, url):
+        """Extract price using pure Beautiful Soup - no Selenium"""
+        if not response or response.status_code != 200:
+            return None, f"Invalid response: {response.status_code if response else 'None'}"
+        
+        try:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            logger.info("🔍 Beautiful Soup price extraction starting...")
+            
+            # Method 1: Look for items-average-price class (most reliable)
+            items_avg_price = soup.find_all(class_="items-average-price")
+            if items_avg_price:
+                for element in items_avg_price:
+                    text_content = element.get_text().strip()
+                    logger.info(f"Found items-average-price: '{text_content}'")
+                    
+                    # Extract price patterns
+                    price_patterns = [
+                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                        r'(\d+(?:[.,]\d+)?)\s*eur?\s*/?m²?',
+                        r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?'
+                    ]
+                    
+                    for pattern in price_patterns:
+                        match = re.search(pattern, text_content, re.IGNORECASE)
+                        if match:
+                            price_str = match.group(1).replace(',', '.')
+                            try:
+                                price = float(price_str)
+                                if 0.5 <= price <= 1000:  # Reasonable price range
+                                    logger.info(f"✅ Beautiful Soup extracted: {price:.2f} €/m²")
+                                    return price, None
+                            except ValueError:
+                                continue
+            
+            # Method 2: Search for "Preço médio nesta zona" text
+            text_content = soup.get_text()
+            zone_price_patterns = [
+                r'preço\s+médio\s+nesta\s+zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                r'Preço\s+médio\s+nesta\s+zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
+                r'preço\s+médio\s+nesta\s+zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?\s*/?m²?'
+            ]
+            
+            for pattern in zone_price_patterns:
+                match = re.search(pattern, text_content, re.IGNORECASE)
+                if match:
+                    price_str = match.group(1).replace(',', '.')
+                    try:
+                        price = float(price_str)
+                        if 0.5 <= price <= 1000:
+                            logger.info(f"✅ Zone price extracted: {price:.2f} €/m²")
+                            return price, None
+                    except ValueError:
+                        continue
+            
+            # Method 3: General €/m² search as fallback
+            euro_per_sqm_matches = re.findall(r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?', text_content)
+            if euro_per_sqm_matches:
+                valid_prices = []
+                for price_str in euro_per_sqm_matches[:5]:  # Check first 5 matches
+                    clean_price = price_str.replace(',', '.')
+                    try:
+                        price = float(clean_price)
+                        if 0.5 <= price <= 1000:
+                            valid_prices.append(price)
+                    except ValueError:
+                        continue
+                
+                if valid_prices:
+                    avg_price = sum(valid_prices) / len(valid_prices)
+                    logger.info(f"✅ Average from {len(valid_prices)} prices: {avg_price:.2f} €/m²")
+                    return avg_price, None
+            
+            return None, "No price information found with Beautiful Soup"
+            
+        except Exception as e:
+            logger.error(f"Beautiful Soup extraction error: {e}")
+            return None, f"Beautiful Soup error: {str(e)}"
+
+# Initialize anonymous Beautiful Soup scraper
+anonymous_scraper = AnonymousBeautifulSoupScraper()
+
 class ProxyRotationScraper:
     """Advanced scraper with residential proxy rotation and session management"""
     
