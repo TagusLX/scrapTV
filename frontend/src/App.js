@@ -277,8 +277,19 @@ const Dashboard = () => {
   const startScraping = async () => {
     try {
       setLoading(true);
+      setGeneralScrapingStatus({
+        type: 'loading',
+        message: 'Démarrage du scraping anonyme Beautiful Soup pour toutes les régions portugaises...'
+      });
+      
       const response = await axios.post(`${API}/scrape/start`);
       setCurrentSession(response.data.session_id);
+      
+      setGeneralScrapingStatus({
+        type: 'success',
+        message: `✅ Scraping démarré avec succès!\nSession ID: ${response.data.session_id}\nScraping anonyme en cours avec Beautiful Soup...`,
+        sessionId: response.data.session_id
+      });
       
       // Poll for session updates
       const pollInterval = setInterval(async () => {
@@ -286,26 +297,77 @@ const Dashboard = () => {
           const sessionResponse = await axios.get(`${API}/scraping-sessions/${response.data.session_id}`);
           const session = sessionResponse.data;
           
-          if (session.status === 'completed' || session.status === 'failed') {
+          if (session.status === 'completed') {
             clearInterval(pollInterval);
             setLoading(false);
             setCurrentSession(null);
+            setGeneralScrapingStatus({
+              type: 'success',
+              message: `🎉 Scraping terminé avec succès!\nPropriétés scrapées: ${session.total_properties || 0}\nRégions: ${session.regions_scraped?.length || 0}`,
+              sessionId: response.data.session_id
+            });
             fetchScrapingSessions();
             fetchProperties();
             fetchRegionStats();
+            
+            // Clear status after 10 seconds
+            setTimeout(() => {
+              setGeneralScrapingStatus(null);
+            }, 10000);
+            
+          } else if (session.status === 'failed') {
+            clearInterval(pollInterval);
+            setLoading(false);
+            setCurrentSession(null);
+            setGeneralScrapingStatus({
+              type: 'error',
+              message: `❌ Scraping échoué: ${session.error_message || 'Erreur inconnue'}`,
+              sessionId: response.data.session_id
+            });
+            fetchScrapingSessions();
+            
+            // Clear error after 8 seconds
+            setTimeout(() => {
+              setGeneralScrapingStatus(null);
+            }, 8000);
+            
           } else if (session.status === 'waiting_captcha') {
+            setGeneralScrapingStatus({
+              type: 'loading',
+              message: '🔐 CAPTCHA détecté - Validation manuelle requise\nVeuillez résoudre le CAPTCHA pour continuer...',
+              sessionId: response.data.session_id
+            });
             // CAPTCHA will be handled by fetchScrapingSessions polling
+          } else if (session.status === 'running') {
+            setGeneralScrapingStatus({
+              type: 'loading',
+              message: `🔄 Scraping anonyme en cours...\nPropriétés: ${session.total_properties || 0} | Régions: ${session.regions_scraped?.length || 0}`,
+              sessionId: response.data.session_id
+            });
           }
         } catch (error) {
           console.error('Error polling session:', error);
           clearInterval(pollInterval);
           setLoading(false);
+          setGeneralScrapingStatus({
+            type: 'error',
+            message: `❌ Erreur de monitoring de session: ${error.message}`
+          });
         }
       }, 3000);
       
     } catch (error) {
       console.error('Error starting scraping:', error);
       setLoading(false);
+      setGeneralScrapingStatus({
+        type: 'error',
+        message: `❌ Erreur lors du démarrage: ${error.response?.data?.detail || error.message}`
+      });
+      
+      // Clear error after 8 seconds
+      setTimeout(() => {
+        setGeneralScrapingStatus(null);
+      }, 8000);
     }
   };
 
