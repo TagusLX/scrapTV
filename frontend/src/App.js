@@ -1352,6 +1352,124 @@ function tagus_value_get_market_data() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="administrative">
+            <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🏛️ Structure Administrative Portugaise
+                </CardTitle>
+                <CardDescription>
+                  Liste complète des distritos, concelhos et freguesias du Portugal
+                </CardDescription>
+                <div className="flex gap-4 mt-4">
+                  <Button 
+                    onClick={fetchAdministrativeList} 
+                    disabled={loadingAdministrativeList}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {loadingAdministrativeList ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Chargement...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="mr-2 h-4 w-4" />
+                        Afficher la Structure
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingAdministrativeList && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <span className="ml-2 text-gray-600">Chargement de la structure administrative...</span>
+                  </div>
+                )}
+
+                {administrativeList && (
+                  <div className="space-y-6">
+                    {/* Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{administrativeList.total_distritos}</div>
+                        <div className="text-sm text-blue-800">Distritos</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">{administrativeList.total_concelhos}</div>
+                        <div className="text-sm text-green-800">Concelhos</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{administrativeList.total_freguesias}</div>
+                        <div className="text-sm text-purple-800">Freguesias</div>
+                      </div>
+                    </div>
+
+                    {/* Administrative Structure */}
+                    <div className="space-y-4">
+                      {administrativeList.structure?.map((distrito, distritoIndex) => (
+                        <Card key={distritoIndex} className="border border-blue-200">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg text-blue-700">
+                              🗺️ {distrito.distrito} ({distrito.total_concelhos} concelhos)
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {distrito.concelhos?.map((concelho, concelhoIndex) => (
+                                <div key={concelhoIndex} className="border border-green-200 rounded-lg p-3 bg-green-50/50">
+                                  <h4 className="font-medium text-green-700 mb-2">
+                                    🏘️ {concelho.concelho} ({concelho.total_freguesias} freguesias)
+                                  </h4>
+                                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                                    {concelho.freguesias?.map((freguesia, freguesiaIndex) => (
+                                      <div key={freguesiaIndex} className="text-xs text-gray-700 hover:text-purple-700 transition-colors">
+                                        <span className="text-purple-600">📍</span> {freguesia.freguesia}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {/* Full Path Examples */}
+                    <Card className="border border-gray-200">
+                      <CardHeader>
+                        <CardTitle className="text-sm text-gray-700">Exemples de Chemins Complets</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                          {administrativeList.structure?.slice(0, 2).map((distrito) => 
+                            distrito.concelhos?.slice(0, 2).map((concelho) =>
+                              concelho.freguesias?.slice(0, 3).map((freguesia, index) => (
+                                <div key={index} className="p-2 bg-gray-50 rounded text-gray-600 font-mono">
+                                  {freguesia.full_path}
+                                </div>
+                              ))
+                            )
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {!administrativeList && !loadingAdministrativeList && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Cliquez sur "Afficher la Structure" pour charger la liste administrative</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="sessions">
             <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
               <CardHeader>
