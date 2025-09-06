@@ -155,12 +155,19 @@ const Dashboard = () => {
 
   const startTargetedScraping = async () => {
     if (!selectedDistrito) {
-      alert("Veuillez sélectionner au moins un distrito");
+      setTargetedScrapingStatus({
+        type: 'error',
+        message: 'Veuillez sélectionner au moins un distrito pour commencer le scraping'
+      });
       return;
     }
     
     try {
       setTargetedScrapingLoading(true);
+      setTargetedScrapingStatus({
+        type: 'loading',
+        message: 'Démarrage du scraping anonyme avec Beautiful Soup...'
+      });
       
       const params = new URLSearchParams();
       params.append('distrito', selectedDistrito);
@@ -174,15 +181,32 @@ const Dashboard = () => {
       
       const response = await axios.post(`${API}/scrape/targeted?${params.toString()}`);
       
-      alert(`✅ ${response.data.message}\nSession ID: ${response.data.session_id}`);
+      setTargetedScrapingStatus({
+        type: 'success',
+        message: `✅ Scraping démarré avec succès!\nSession ID: ${response.data.session_id}\nZone: ${response.data.message}`,
+        sessionId: response.data.session_id
+      });
       
       // Refresh data
       fetchScrapingSessions();
       fetchDetailedCoverage();
       
+      // Clear status after 10 seconds
+      setTimeout(() => {
+        setTargetedScrapingStatus(null);
+      }, 10000);
+      
     } catch (error) {
       console.error('Error starting targeted scraping:', error);
-      alert("❌ Erreur lors du démarrage du scraping ciblé");
+      setTargetedScrapingStatus({
+        type: 'error',
+        message: `❌ Erreur lors du démarrage du scraping: ${error.response?.data?.detail || error.message}`
+      });
+      
+      // Clear error after 8 seconds
+      setTimeout(() => {
+        setTargetedScrapingStatus(null);
+      }, 8000);
     } finally {
       setTargetedScrapingLoading(false);
     }
