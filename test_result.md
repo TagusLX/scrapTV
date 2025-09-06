@@ -220,6 +220,18 @@ The user requested enhancements to an existing real estate data scraping applica
           agent: "main"
           comment: "Filters successfully applied across all tabs. Statistics update from 301 to 15 regions when Aveiro selected. Hierarchical display format working correctly (e.g., 'Aveiro > Ovar > Esmoriz')."
 
+  - task: "Administrative Structure Tab and Anonymous Scraping Integration"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE NEW FEATURES TESTING COMPLETE: Successfully tested all new Anonymous Beautiful Soup scraping system and Administrative List functionality. (1) ADMINISTRATIVE STRUCTURE TAB - NEW FEATURE WORKING PERFECTLY: Successfully navigated to 'Structure Administrative' tab, clicked 'Afficher la Structure' button, verified administrative data loads correctly showing 29 distritos, 100 concelhos, 1229 freguesias with proper hierarchical display structure. (2) ANONYMOUS SCRAPING INTEGRATION VERIFIED: Confirmed new anonymous scraper is being used - scraping sessions create successfully and use Anonymous Beautiful Soup system. CAPTCHA handling interface available and functional. (3) ALL 6 TABS WORKING: Verified navigation works for all tabs (Aperçu, Couverture, Structure Administrative, Sessions, Propriétés, Statistiques). (4) TARGETED SCRAPING 'SCRAPER ZONE' BUTTON FUNCTIONALITY CONFIRMED: Investigated user's reported issue - button works correctly when distrito is selected. Confirmed API calls are made (POST /api/scrape/targeted) and scraping sessions start successfully. Button shows proper disabled/enabled states and provides user feedback through 'Zone ciblée' display. User issue was likely due to not selecting a distrito first, which is required behavior. (5) FILTERING FUNCTIONALITY CONFIRMED: All filtering dropdowns (8 total) are present and functional. The application is working correctly and all new features are operational."
+
 ## metadata:
   created_by: "main_agent"
   version: "1.0"
