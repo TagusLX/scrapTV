@@ -1020,6 +1020,52 @@ function tagus_value_get_market_data() {
                 </p>
               </div>
             )}
+
+            {/* Status Messages for Targeted Scraping */}
+            {targetedScrapingStatus && (
+              <div className={`p-4 rounded-lg border ${
+                targetedScrapingStatus.type === 'success' ? 'bg-green-50 border-green-200' :
+                targetedScrapingStatus.type === 'error' ? 'bg-red-50 border-red-200' :
+                'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-start gap-3">
+                  {targetedScrapingStatus.type === 'loading' && (
+                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin mt-0.5" />
+                  )}
+                  {targetedScrapingStatus.type === 'success' && (
+                    <div className="h-5 w-5 text-green-600 mt-0.5">✅</div>
+                  )}
+                  {targetedScrapingStatus.type === 'error' && (
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                  )}
+                  
+                  <div className="flex-1">
+                    <div className={`text-sm font-medium ${
+                      targetedScrapingStatus.type === 'success' ? 'text-green-800' :
+                      targetedScrapingStatus.type === 'error' ? 'text-red-800' :
+                      'text-blue-800'
+                    }`}>
+                      {targetedScrapingStatus.message.split('\n').map((line, index) => (
+                        <div key={index}>{line}</div>
+                      ))}
+                    </div>
+                    
+                    {targetedScrapingStatus.sessionId && (
+                      <div className="mt-2 text-xs text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded">
+                        Session: {targetedScrapingStatus.sessionId}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={() => setTargetedScrapingStatus(null)}
+                    className="text-gray-400 hover:text-gray-600 ml-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
