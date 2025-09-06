@@ -1000,9 +1000,10 @@ function tagus_value_get_market_data() {
 
         {/* Main Content */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-white/50 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-6 bg-white/50 backdrop-blur-sm">
             <TabsTrigger value="overview">Aperçu</TabsTrigger>
             <TabsTrigger value="coverage">Couverture</TabsTrigger>
+            <TabsTrigger value="administrative">Structure Administrative</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="properties">Propriétés</TabsTrigger>
             <TabsTrigger value="stats">Statistiques</TabsTrigger>
