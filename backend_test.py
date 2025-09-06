@@ -1941,9 +1941,63 @@ class IdealistaScraperAPITester:
             print("   ❌ Failed to start targeted stealth scraping")
             all_tests_passed = False
         
-        return all_tests_passed
+    def run_all_tests(self):
+        """Run all tests in sequence focusing on Anonymous Beautiful Soup system"""
+        print("🚀 Starting Anonymous Beautiful Soup Scraper API Tests")
+        print(f"   Base URL: {self.base_url}")
+        print(f"   API URL: {self.api_url}")
+        print("="*80)
 
-    def test_advanced_anti_bot_bypass_real_scenario(self):
+        # Priority 1: New Anonymous Beautiful Soup System Tests
+        print("\n🎯 PRIORITY TESTS - Anonymous Beautiful Soup System")
+        test1_result = self.test_administrative_list_endpoint()
+        test2_result = self.test_anonymous_scraper_integration()
+        test3_result = self.test_captcha_handling_updated()
+        test4_result = self.test_new_scraping_method()
+        
+        # Priority 2: Core functionality verification
+        print("\n🔧 CORE FUNCTIONALITY VERIFICATION")
+        test5_result = self.test_get_properties()
+        test6_result = self.test_get_region_stats()
+        test7_result = self.test_export_php()
+        test8_result = self.test_administrative_endpoints()
+        test9_result = self.test_filtering_endpoints()
+        
+        # Priority 3: Session management
+        print("\n📊 SESSION MANAGEMENT TESTS")
+        test10_result = self.test_start_scraping()
+        test11_result = self.test_get_scraping_sessions()
+        test12_result = self.test_get_specific_session()
+        
+        # Wait for session completion if we have one
+        if self.session_id:
+            self.wait_for_session_completion()
+        
+        # Final summary
+        print("\n" + "="*80)
+        print("🏁 ANONYMOUS BEAUTIFUL SOUP SYSTEM TEST SUMMARY")
+        print(f"   Tests Run: {self.tests_run}")
+        print(f"   Tests Passed: {self.tests_passed}")
+        print(f"   Tests Failed: {self.tests_run - self.tests_passed}")
+        print(f"   Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
+        
+        # Priority test results
+        priority_tests = [test1_result, test2_result, test3_result, test4_result]
+        priority_passed = sum(1 for test in priority_tests if test)
+        
+        print(f"\n🎯 PRIORITY TESTS (Anonymous Beautiful Soup System):")
+        print(f"   Administrative List Endpoint: {'✅ PASS' if test1_result else '❌ FAIL'}")
+        print(f"   Anonymous Scraper Integration: {'✅ PASS' if test2_result else '❌ FAIL'}")
+        print(f"   Updated CAPTCHA Handling: {'✅ PASS' if test3_result else '❌ FAIL'}")
+        print(f"   New Beautiful Soup Method: {'✅ PASS' if test4_result else '❌ FAIL'}")
+        print(f"   Priority Success Rate: {(priority_passed/4)*100:.1f}%")
+        
+        if priority_passed == 4:
+            print("✅ ALL PRIORITY TESTS PASSED - Anonymous Beautiful Soup System Working!")
+        else:
+            print("❌ SOME PRIORITY TESTS FAILED - Anonymous Beautiful Soup System Issues Detected!")
+        
+        return self.tests_passed == self.tests_run
         """REAL TEST: Advanced Anti-Bot Bypass System for Faro > Tavira > Conceicao e Cabanas de Tavira"""
         print("\n🛡️ REAL TEST: Advanced Anti-Bot Bypass System - Targeted Scraping")
         print("   Target: Faro > Tavira > Conceicao e Cabanas de Tavira")
