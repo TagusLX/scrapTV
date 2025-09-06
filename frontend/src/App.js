@@ -815,6 +815,52 @@ function tagus_value_get_market_data() {
                 </div>
               </div>
             )}
+
+            {/* General Scraping Status Messages */}
+            {generalScrapingStatus && (
+              <div className={`p-4 rounded-lg border ${
+                generalScrapingStatus.type === 'success' ? 'bg-green-50 border-green-200' :
+                generalScrapingStatus.type === 'error' ? 'bg-red-50 border-red-200' :
+                'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-start gap-3">
+                  {generalScrapingStatus.type === 'loading' && (
+                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin mt-0.5" />
+                  )}
+                  {generalScrapingStatus.type === 'success' && (
+                    <div className="h-5 w-5 text-green-600 mt-0.5">✅</div>
+                  )}
+                  {generalScrapingStatus.type === 'error' && (
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                  )}
+                  
+                  <div className="flex-1">
+                    <div className={`text-sm font-medium ${
+                      generalScrapingStatus.type === 'success' ? 'text-green-800' :
+                      generalScrapingStatus.type === 'error' ? 'text-red-800' :
+                      'text-blue-800'
+                    }`}>
+                      {generalScrapingStatus.message.split('\n').map((line, index) => (
+                        <div key={index}>{line}</div>
+                      ))}
+                    </div>
+                    
+                    {generalScrapingStatus.sessionId && (
+                      <div className="mt-2 text-xs text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded">
+                        Session: {generalScrapingStatus.sessionId}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={() => setGeneralScrapingStatus(null)}
+                    className="text-gray-400 hover:text-gray-600 ml-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
