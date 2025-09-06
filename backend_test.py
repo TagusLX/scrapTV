@@ -1480,7 +1480,7 @@ class IdealistaScraperAPITester:
             print(f"   ✅ Retrieved administrative list successfully")
             
             # Verify response structure
-            required_fields = ['distritos', 'total_distritos', 'total_concelhos', 'total_freguesias']
+            required_fields = ['structure', 'total_distritos', 'total_concelhos', 'total_freguesias']
             for field in required_fields:
                 if field in response:
                     print(f"   ✅ Found required field '{field}': {response[field]}")
@@ -1488,14 +1488,14 @@ class IdealistaScraperAPITester:
                     print(f"   ❌ Missing required field: {field}")
                     return False
             
-            # Verify distritos structure
-            if 'distritos' in response and response['distritos']:
-                distritos = response['distritos']
-                print(f"   ✅ Found {len(distritos)} distritos")
+            # Verify structure
+            if 'structure' in response and response['structure']:
+                structure = response['structure']
+                print(f"   ✅ Found {len(structure)} distritos in structure")
                 
                 # Check first distrito structure
-                sample_distrito = distritos[0]
-                distrito_fields = ['name', 'display_name', 'concelhos_count', 'freguesias_count', 'concelhos']
+                sample_distrito = structure[0]
+                distrito_fields = ['distrito', 'distrito_code', 'total_concelhos', 'concelhos']
                 
                 for field in distrito_fields:
                     if field in sample_distrito:
@@ -1507,7 +1507,7 @@ class IdealistaScraperAPITester:
                 # Check concelho structure
                 if 'concelhos' in sample_distrito and sample_distrito['concelhos']:
                     sample_concelho = sample_distrito['concelhos'][0]
-                    concelho_fields = ['name', 'display_name', 'freguesias_count', 'full_path', 'freguesias']
+                    concelho_fields = ['concelho', 'concelho_code', 'total_freguesias', 'freguesias']
                     
                     for field in concelho_fields:
                         if field in sample_concelho:
@@ -1519,7 +1519,7 @@ class IdealistaScraperAPITester:
                     # Check freguesia structure
                     if 'freguesias' in sample_concelho and sample_concelho['freguesias']:
                         sample_freguesia = sample_concelho['freguesias'][0]
-                        freguesia_fields = ['name', 'display_name', 'full_path']
+                        freguesia_fields = ['freguesia', 'freguesia_code', 'full_path']
                         
                         for field in freguesia_fields:
                             if field in sample_freguesia:
