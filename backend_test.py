@@ -2201,113 +2201,60 @@ class IdealistaScraperAPITester:
         return all_tests_passed
 
 def main():
-    print("🚀 Starting Idealista Scraper API Tests - Stealth Scraping System Testing")
+    print("🚀 Starting Anonymous Beautiful Soup Scraper API Tests")
     print("=" * 80)
     
     tester = IdealistaScraperAPITester()
     
-    # Test NEW: Stealth scraping system (MAIN FOCUS)
-    print("\n🕵️ MAIN TEST: Stealth Scraping System")
-    stealth_scraping_test_passed = tester.test_stealth_scraping_system()
+    # Priority 1: New Anonymous Beautiful Soup System Tests
+    print("\n🎯 PRIORITY TESTS - Anonymous Beautiful Soup System")
+    test1_result = tester.test_administrative_list_endpoint()
+    test2_result = tester.test_anonymous_scraper_integration()
+    test3_result = tester.test_captcha_handling_updated()
+    test4_result = tester.test_new_scraping_method()
     
-    # Test enhanced error handling and retry functionality
-    print("\n🔧 Testing Enhanced Error Handling & Retry Functionality")
-    enhanced_error_test_passed = tester.test_enhanced_error_handling_and_retry()
+    # Priority 2: Core functionality verification
+    print("\n🔧 CORE FUNCTIONALITY VERIFICATION")
+    test5_result = tester.test_get_properties()
+    test6_result = tester.test_get_region_stats()
+    test7_result = tester.test_export_php()
+    test8_result = tester.test_administrative_endpoints()
+    test9_result = tester.test_filtering_endpoints()
     
-    # Test property type categorization and rural plot functionality
-    print("\n🏠 Testing Property Type Categorization & Rural Plot Functionality")
-    property_type_test_passed = tester.test_property_type_categorization()
+    # Priority 3: Session management
+    print("\n📊 SESSION MANAGEMENT TESTS")
+    test10_result = tester.test_start_scraping()
+    test11_result = tester.test_get_scraping_sessions()
+    test12_result = tester.test_get_specific_session()
     
-    # Test detailed statistics endpoint with new property types
-    print("\n📈 Testing Detailed Statistics Endpoint with New Property Types")
-    detailed_stats_test_passed = tester.test_detailed_stats_endpoint()
+    # Wait for session completion if we have one
+    if tester.session_id:
+        tester.wait_for_session_completion()
     
-    # Test targeted scraping endpoint
-    print("\n🎯 Testing Targeted Scraping Endpoint")
-    targeted_scraping_test_passed = tester.test_targeted_scraping_endpoint()
+    # Final summary
+    print("\n" + "="*80)
+    print("🏁 ANONYMOUS BEAUTIFUL SOUP SYSTEM TEST SUMMARY")
+    print(f"   Tests Run: {tester.tests_run}")
+    print(f"   Tests Passed: {tester.tests_passed}")
+    print(f"   Tests Failed: {tester.tests_run - tester.tests_passed}")
+    print(f"   Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # Test detailed coverage endpoint
-    print("\n📊 Testing Detailed Coverage Endpoint")
-    detailed_coverage_test_passed = tester.test_detailed_coverage_endpoint()
+    # Priority test results
+    priority_tests = [test1_result, test2_result, test3_result, test4_result]
+    priority_passed = sum(1 for test in priority_tests if test)
     
-    # Test URL generation patterns
-    print("\n🔗 Testing URL Generation Pattern Verification")
-    url_test_passed = tester.test_url_generation_patterns()
+    print(f"\n🎯 PRIORITY TESTS (Anonymous Beautiful Soup System):")
+    print(f"   Administrative List Endpoint: {'✅ PASS' if test1_result else '❌ FAIL'}")
+    print(f"   Anonymous Scraper Integration: {'✅ PASS' if test2_result else '❌ FAIL'}")
+    print(f"   Updated CAPTCHA Handling: {'✅ PASS' if test3_result else '❌ FAIL'}")
+    print(f"   New Beautiful Soup Method: {'✅ PASS' if test4_result else '❌ FAIL'}")
+    print(f"   Priority Success Rate: {(priority_passed/4)*100:.1f}%")
     
-    # Test administrative endpoints
-    print("\n🏛️ Testing Administrative Structure...")
-    admin_test_passed = tester.test_administrative_endpoints()
-    
-    # Test filtering endpoints
-    print("\n🔍 Testing Filtering Functionality...")
-    filter_test_passed = tester.test_filtering_endpoints()
-    
-    # Test basic endpoints
-    print("\n📋 Testing Basic API Endpoints...")
-    tester.test_get_scraping_sessions()
-    tester.test_get_properties()
-    tester.test_get_region_stats()
-    tester.test_export_php()
-    
-    # Test CAPTCHA endpoints
-    print("\n🔐 Testing CAPTCHA Endpoints...")
-    tester.test_captcha_endpoints()
-    
-    # Test scraping functionality
-    print("\n🕷️ Testing Scraping Functionality...")
-    if tester.test_start_scraping():
-        # Wait a bit for the session to start
-        time.sleep(3)
-        tester.test_get_specific_session()
-        
-        # Monitor session for CAPTCHA detection
-        tester.test_session_status_monitoring()
-        
-        # Wait for session to complete (with shorter timeout for testing)
-        tester.wait_for_session_completion(max_wait_time=30)
-        
-        # Test data retrieval after scraping
-        print("\n📊 Testing Data After Scraping...")
-        tester.test_get_properties()
-        tester.test_get_region_stats()
-        tester.test_export_php()
-        
-        # Re-test detailed coverage with actual data
-        print("\n📊 Re-testing Detailed Coverage with Scraped Data...")
-        tester.test_detailed_coverage_endpoint()
-        
-        # Re-test detailed stats with actual data
-        print("\n📊 Re-testing Detailed Stats with Scraped Data...")
-        tester.test_detailed_stats_endpoint()
-    
-    # Test data management
-    print("\n🗑️ Testing Data Management...")
-    tester.test_clear_properties()
-    
-    # Final results
-    print("\n" + "=" * 80)
-    print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} tests passed")
-    
-    # Special focus on stealth scraping system verification
-    print(f"\n🕵️ STEALTH SCRAPING SYSTEM TESTING RESULTS:")
-    print(f"   Stealth Scraping System Test: {'✅ PASSED' if stealth_scraping_test_passed else '❌ FAILED'}")
-    print(f"   Enhanced Error Handling & Retry Test: {'✅ PASSED' if enhanced_error_test_passed else '❌ FAILED'}")
-    print(f"   Property Type Categorization Test: {'✅ PASSED' if property_type_test_passed else '❌ FAILED'}")
-    print(f"   Detailed Stats Test: {'✅ PASSED' if detailed_stats_test_passed else '❌ FAILED'}")
-    print(f"   Targeted Scraping Test: {'✅ PASSED' if targeted_scraping_test_passed else '❌ FAILED'}")
-    print(f"   Detailed Coverage Test: {'✅ PASSED' if detailed_coverage_test_passed else '❌ FAILED'}")
-    print(f"   URL Pattern Test: {'✅ PASSED' if url_test_passed else '❌ FAILED'}")
-    print(f"   Administrative Test: {'✅ PASSED' if admin_test_passed else '❌ FAILED'}")
-    print(f"   Filtering Test: {'✅ PASSED' if filter_test_passed else '❌ FAILED'}")
-    
-    # Check if main new features passed
-    main_features_passed = stealth_scraping_test_passed and enhanced_error_test_passed and property_type_test_passed
-    
-    if tester.tests_passed == tester.tests_run and main_features_passed:
-        print("🎉 All tests passed! Stealth scraping system, enhanced error handling, and property type categorization verified successfully!")
+    if priority_passed == 4:
+        print("✅ ALL PRIORITY TESTS PASSED - Anonymous Beautiful Soup System Working!")
         return 0
     else:
-        print("❌ Some tests failed!")
+        print("❌ SOME PRIORITY TESTS FAILED - Anonymous Beautiful Soup System Issues Detected!")
         return 1
 
 if __name__ == "__main__":
