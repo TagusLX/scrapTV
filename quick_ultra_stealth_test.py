@@ -4,7 +4,7 @@ import json
 
 def test_ultra_stealth_basic():
     """Quick test of ultra-stealth scraper basic functionality"""
-    base_url = "https://realestate-scraper.preview.emergentagent.com"
+    base_url = "https://property-radar-4.preview.emergentagent.com"
     api_url = f"{base_url}/api"
     
     print("🕵️ Quick Ultra-Stealth Basic Test")

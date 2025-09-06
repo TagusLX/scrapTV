@@ -50,7 +50,7 @@ def test_basic_functionality():
     print("\n🚀 BASIC FUNCTIONALITY TEST")
     print("-" * 50)
     
-    base_url = "https://realestate-scraper.preview.emergentagent.com"
+    base_url = "https://property-radar-4.preview.emergentagent.com"
     
     try:
         # Test 1: Basic API health

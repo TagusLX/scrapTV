@@ -4,7 +4,7 @@ import requests
 import json
 
 def test_enhanced_functionality():
-    base_url = "https://realestate-scraper.preview.emergentagent.com/api"
+    base_url = "https://property-radar-4.preview.emergentagent.com/api"
     
     print("🔧 Testing Enhanced Error Handling and Retry Functionality")
     print("=" * 60)
