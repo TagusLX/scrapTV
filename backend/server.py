@@ -3398,6 +3398,76 @@ async def get_detailed_stats(
     
     return list(location_stats.values())
 
+@api_router.get("/administrative/list")
+async def get_administrative_list():
+    """Display the list of districts, concelhos and freguesias (Administrative List)"""
+    logger.info("📋 Fetching complete Portuguese administrative structure list")
+    
+    try:
+        # Initialize scraper to get administrative structure
+        temp_scraper = IdealistaScraper()
+        structure = await temp_scraper.get_administrative_structure()
+        
+        if not structure:
+            # Use fallback structure if idealista fetch fails
+            logger.warning("Using fallback administrative structure")
+            structure = PORTUGUESE_STRUCTURE
+        
+        # Format the structure for display
+        administrative_list = {
+            "total_distritos": 0,
+            "total_concelhos": 0, 
+            "total_freguesias": 0,
+            "structure": []
+        }
+        
+        total_concelhos = 0
+        total_freguesias = 0
+        
+        for distrito, concelhos in structure.items():
+            distrito_info = {
+                "distrito": distrito.title(),
+                "distrito_code": distrito,
+                "total_concelhos": len(concelhos),
+                "concelhos": []
+            }
+            
+            total_concelhos += len(concelhos)
+            
+            for concelho, freguesias in concelhos.items():
+                concelho_info = {
+                    "concelho": concelho.title(),
+                    "concelho_code": concelho,
+                    "total_freguesias": len(freguesias),
+                    "freguesias": []
+                }
+                
+                total_freguesias += len(freguesias)
+                
+                for freguesia in freguesias:
+                    freguesia_info = {
+                        "freguesia": freguesia.title(),
+                        "freguesia_code": freguesia,
+                        "full_path": f"{distrito.title()} > {concelho.title()} > {freguesia.title()}"
+                    }
+                    concelho_info["freguesias"].append(freguesia_info)
+                
+                distrito_info["concelhos"].append(concelho_info)
+            
+            administrative_list["structure"].append(distrito_info)
+        
+        administrative_list["total_distritos"] = len(structure)
+        administrative_list["total_concelhos"] = total_concelhos
+        administrative_list["total_freguesias"] = total_freguesias
+        
+        logger.info(f"✅ Administrative list compiled: {administrative_list['total_distritos']} distritos, {administrative_list['total_concelhos']} concelhos, {administrative_list['total_freguesias']} freguesias")
+        
+        return administrative_list
+        
+    except Exception as e:
+        logger.error(f"Error fetching administrative list: {e}")
+        raise HTTPException(status_code=500, detail="Error fetching administrative structure")
+
 @api_router.get("/stats/filter")
 async def get_stats_filtered(
     distrito: Optional[str] = None,
