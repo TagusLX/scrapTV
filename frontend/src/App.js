@@ -41,6 +41,7 @@ const Dashboard = () => {
   const [targetedScrapingLoading, setTargetedScrapingLoading] = useState(false);
   const [administrativeList, setAdministrativeList] = useState(null);
   const [loadingAdministrativeList, setLoadingAdministrativeList] = useState(false);
+  const [targetedScrapingStatus, setTargetedScrapingStatus] = useState(null); // New state for status messages
 
   const fetchScrapingSessions = async () => {
     try {
