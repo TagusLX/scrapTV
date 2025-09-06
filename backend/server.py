@@ -2335,7 +2335,7 @@ class IdealistaScraper:
             return False
     
     async def scrape_freguesia(self, distrito, concelho, freguesia, operation_type='sale', session_id=None):
-        """Scrape average price per m² from idealista.pt freguesia property listings using stealth methods"""
+        """Scrape average price per m² using 100% Anonymous Beautiful Soup approach"""
         properties = []
         error_details = []
         
@@ -2376,7 +2376,11 @@ class IdealistaScraper:
                 }
             ]
         
-        logger.info(f"Starting STEALTH scraping of {len(urls_to_scrape)} property types for: {distrito}/{concelho}/{freguesia} ({operation_type})")
+        logger.info(f"🕵️‍♂️ Starting ANONYMOUS BEAUTIFUL SOUP scraping of {len(urls_to_scrape)} property types")
+        logger.info(f"Target: {distrito}/{concelho}/{freguesia} ({operation_type})")
+        
+        # Initialize anonymous session for this scraping operation
+        await anonymous_scraper.initialize_anonymous_session(session_id)
         
         all_properties = []
         
@@ -2384,907 +2388,85 @@ class IdealistaScraper:
             url = url_info['url']
             property_type = url_info['property_type']
             
-            logger.info(f"🕵️ Stealth scraping {property_type} from: {url}")
+            logger.info(f"🎯 Anonymous Beautiful Soup scraping {property_type}: {url}")
             
             try:
-                # ULTRA-ADVANCED HUMAN MIMICKING ANTI-BOT SYSTEM
+                # Use 100% Anonymous Beautiful Soup approach
                 average_price_per_sqm = None
-                real_data_found = False
                 scraping_error = None
                 
-                logger.info(f"🧠 Attempting HUMAN MIMICKING BYPASS for {property_type}")
+                # Make anonymous request
+                response = await anonymous_scraper.anonymous_get(url)
                 
-                # NEW Strategy 0: Full Human Mimicking Session (most advanced)
-                try:
-                    logger.info("🎭 Method 0: Full Human Mimicking Session...")
-                    
-                    human_session_key = f"human_{session_id}_{property_type}"
-                    page_content = await humanized_scraper.human_like_scraping_session(url, human_session_key)
-                    
-                    if page_content:
-                        zone_price, extraction_error = stealth_scraper.extract_zone_price(page_content, url)
+                if response:
+                    if response.status_code == 200:
+                        # Extract price using Beautiful Soup
+                        price, extraction_error = anonymous_scraper.extract_price_beautiful_soup(response, url)
                         
-                        if zone_price:
-                            average_price_per_sqm = zone_price
-                            real_data_found = True
-                            logger.info(f"✅ HUMAN MIMICKING SUCCESS: {average_price_per_sqm:.2f} €/m² (bypassed all detection)")
+                        if price:
+                            average_price_per_sqm = price
+                            logger.info(f"✅ ANONYMOUS SUCCESS: {average_price_per_sqm:.2f} €/m² for {property_type}")
                         else:
-                            logger.warning(f"Human mimicking - page accessed but no price found: {extraction_error}")
+                            scraping_error = f"No price found: {extraction_error}"
+                            logger.warning(f"⚠️ No price found for {property_type}: {extraction_error}")
                     else:
-                        logger.warning("Human mimicking - failed to access page")
-                except Exception as human_e:
-                    logger.warning(f"Human mimicking failed: {human_e}")
+                        scraping_error = f"HTTP {response.status_code} error"
+                        logger.warning(f"❌ HTTP {response.status_code} for {property_type}")
+                else:
+                    scraping_error = "Anonymous request failed (CAPTCHA or blocked)"
+                    logger.warning(f"❌ Anonymous request failed for {property_type}")
                 
-                # If human mimicking fails, try previous 4-tier strategy
-                if not real_data_found:
-                    # Strategy 1: Try Undetected Chrome (most advanced)
-                    try:
-                        logger.info("🤖 Method 1: Undetected Chrome...")
-                        if await undetected_scraper.setup_undetected_chrome():
-                            undetected_scraper.driver.get(url)
-                            await asyncio.sleep(random.uniform(8, 15))
-                            
-                            page_source = undetected_scraper.driver.page_source
-                            zone_price, extraction_error = stealth_scraper.extract_zone_price(page_source, url)
-                            
-                            if zone_price:
-                                average_price_per_sqm = zone_price
-                                real_data_found = True
-                                logger.info(f"✅ UNDETECTED CHROME SUCCESS: {average_price_per_sqm:.2f} €/m²")
-                            else:
-                                logger.warning(f"Undetected Chrome - no price found: {extraction_error}")
-                            
-                            undetected_scraper.driver.quit()
-                    except Exception as undetected_e:
-                        logger.warning(f"Undetected Chrome failed: {undetected_e}")
-                    
-                    # Strategy 2: Try Session-based approach with realistic browsing
-                    if not real_data_found:
-                        try:
-                            logger.info("🍪 Method 2: Realistic Session Management...")
-                            session_id_temp = f"session_{random.randint(1000, 9999)}"
-                            realistic_session = await session_manager.create_realistic_session(session_id_temp)
-                            
-                            if realistic_session:
-                                # Make request with established session
-                                headers = stealth_scraper.get_natural_headers()
-                                response = realistic_session.get(url, headers=headers, timeout=15)
-                                
-                                if response.status_code == 200:
-                                    zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
-                                    
-                                    if zone_price:
-                                        average_price_per_sqm = zone_price
-                                        real_data_found = True
-                                        logger.info(f"✅ SESSION-BASED SUCCESS: {average_price_per_sqm:.2f} €/m²")
-                                    else:
-                                        logger.warning(f"Session-based - no price found: {extraction_error}")
-                                elif response.status_code == 403:
-                                    logger.warning("Session-based approach also got 403 - trying proxies...")
-                                else:
-                                    logger.warning(f"Session-based got HTTP {response.status_code}")
-                                    
-                        except Exception as session_e:
-                            logger.warning(f"Session-based approach failed: {session_e}")
-                    
-                    # Strategy 3: Try proxy rotation (if other methods fail)
-                    if not real_data_found:
-                        try:
-                            logger.info("🌐 Method 3: Proxy Rotation...")
-                            await proxy_scraper.fetch_fresh_proxies()
-                            
-                            # Try multiple proxies
-                            for attempt in range(min(3, len(proxy_scraper.working_proxies))):
-                                proxy = proxy_scraper.get_next_proxy()
-                                if not proxy:
-                                    break
-                                    
-                                logger.info(f"Testing proxy {attempt + 1}: {proxy}")
-                                if await proxy_scraper.test_proxy(proxy):
-                                    try:
-                                        proxies = {
-                                            'http': f'http://{proxy}',
-                                            'https': f'http://{proxy}'
-                                        }
-                                        
-                                        headers = stealth_scraper.get_natural_headers()
-                                        response = requests.get(url, proxies=proxies, headers=headers, timeout=15)
-                                        
-                                        if response.status_code == 200:
-                                            zone_price, extraction_error = stealth_scraper.extract_zone_price(response.text, url)
-                                            
-                                            if zone_price:
-                                                average_price_per_sqm = zone_price
-                                                real_data_found = True
-                                                logger.info(f"✅ PROXY SUCCESS with {proxy}: {average_price_per_sqm:.2f} €/m²")
-                                                break
-                                        elif response.status_code == 403:
-                                            logger.warning(f"Proxy {proxy} also blocked with 403")
-                                        
-                                    except Exception as proxy_req_e:
-                                        logger.warning(f"Proxy {proxy} request failed: {proxy_req_e}")
-                                        continue
-                                        
-                        except Exception as proxy_e:
-                            logger.warning(f"Proxy rotation failed: {proxy_e}")
-                    
-                    # Strategy 4: Fallback to ultra-stealth (existing method)
-                    if not real_data_found:
-                        logger.info("🕵️ Method 4: Ultra-Stealth Fallback...")
-                        try:
-                            page_source = await ultra_stealth_scraper.ultra_stealth_get(url)
-                            
-                            if page_source:
-                                zone_price, extraction_error = ultra_stealth_scraper.extract_zone_price_from_selenium(url)
-                                
-                                if zone_price:
-                                    average_price_per_sqm = zone_price
-                                    real_data_found = True
-                                    logger.info(f"✅ ULTRA-STEALTH FALLBACK SUCCESS: {average_price_per_sqm:.2f} €/m²")
-                                else:
-                                    scraping_error = extraction_error or "No price data found with ultra-stealth method"
-                            else:
-                                scraping_error = "Ultra-stealth page retrieval failed"
-                                
-                        except Exception as ultra_e:
-                            scraping_error = f"All 5 advanced bypass methods failed: {str(ultra_e)}"
-                
-                # If all 5 advanced methods fail, set comprehensive error
-                if not real_data_found and not scraping_error:
-                    scraping_error = "All advanced anti-bot bypass methods failed: Human Mimicking, Undetected Chrome, Session Management, Proxy Rotation, and Ultra-Stealth all blocked by sophisticated anti-bot protection"
-                
-                # Create property entry ONLY if we have real scraped data
-                if real_data_found and average_price_per_sqm and average_price_per_sqm > 0:
+                # Create property record
+                if average_price_per_sqm:
                     property_data = {
+                        'id': str(uuid.uuid4()),
                         'region': distrito,
-                        'location': f"{concelho}_{freguesia}",
-                        'property_type': property_type,  # Specific property type (apartment, house, urban_plot, rural_plot)
-                        'price': None,  # Individual property prices not available from zone averages
-                        'price_per_sqm': average_price_per_sqm,  # REAL scraped price from "Preço médio nesta zona"
-                        'area': None,  # Not applicable for zone averages
+                        'location': f"{concelho} > {freguesia}",
+                        'property_type': property_type,
                         'operation_type': operation_type,
-                        'url': url
+                        'price_per_sqm': average_price_per_sqm,
+                        'url': url,
+                        'scraped_at': datetime.now(timezone.utc)
                     }
                     
                     all_properties.append(property_data)
-                    logger.info(f"✅ Added STEALTH SCRAPED {property_type} {operation_type}: {average_price_per_sqm:.2f} €/m² for {distrito}/{concelho}/{freguesia}")
+                    
+                    logger.info(f"💾 Property saved: {property_type} - {average_price_per_sqm:.2f} €/m²")
                 else:
-                    # Record detailed error for this property type
-                    error_info = {
+                    # Record failed scraping attempt
+                    error_detail = {
                         'property_type': property_type,
                         'operation_type': operation_type,
                         'url': url,
-                        'error': scraping_error or "No real price data found",
+                        'error': scraping_error or 'Unknown error',
                         'timestamp': datetime.now(timezone.utc).isoformat()
                     }
-                    error_details.append(error_info)
-                    logger.warning(f"❌ Failed to stealth scrape {property_type} {operation_type} at {distrito}/{concelho}/{freguesia}: {scraping_error or 'No price data'}")
+                    error_details.append(error_detail)
+                    
+                    logger.error(f"💥 Failed: {property_type} - {scraping_error}")
                 
-                # Additional delay between property types for ultra-stealth
-                logger.info(f"Ultra-stealth waiting before next property type...")
-                await asyncio.sleep(random.uniform(10, 20))  # Even longer delays
-                
+                # Longer delay between property types for maximum anonymity
+                if url_info != urls_to_scrape[-1]:  # Not the last item
+                    additional_delay = random.uniform(10, 25)
+                    logger.info(f"⏳ Extra anonymity delay: {additional_delay:.1f}s")
+                    await asyncio.sleep(additional_delay)
+                    
             except Exception as e:
-                error_info = {
+                error_detail = {
                     'property_type': property_type,
                     'operation_type': operation_type,
                     'url': url,
-                    'error': f"Unexpected error: {str(e)}",
+                    'error': f'Exception: {str(e)}',
                     'timestamp': datetime.now(timezone.utc).isoformat()
                 }
-                error_details.append(error_info)
-                logger.error(f"Error in ultra-stealth scraping {property_type} from {url}: {e}")
+                error_details.append(error_detail)
+                
+                logger.error(f"💥 Exception scraping {property_type}: {e}")
                 continue
         
-        # Clean up ultra-stealth driver after all property types are processed
-        ultra_stealth_scraper.close_driver()
-        logger.info("Ultra-stealth driver cleaned up")
+        logger.info(f"✅ Anonymous scraping completed: {len(all_properties)} successful, {len(error_details)} failed")
         
-        # Update session with detailed results
-        if session_id:
-            zone_key = f"{distrito}/{concelho}/{freguesia}"
-            if all_properties:
-                # Success - add to success zones
-                await db.scraping_sessions.update_one(
-                    {"id": session_id},
-                    {"$push": {
-                        "success_zones": {
-                            "zone": zone_key,
-                            "operation_type": operation_type,
-                            "properties_count": len(all_properties),
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        }
-                    }}
-                )
-            
-            if error_details:
-                # Errors occurred - add to failed zones
-                await db.scraping_sessions.update_one(
-                    {"id": session_id},
-                    {"$push": {
-                        "failed_zones": {
-                            "zone": zone_key,
-                            "operation_type": operation_type,
-                            "errors": error_details,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        }
-                    }}
-                )
-        
-        return all_properties
-        """Scrape average price per m² from idealista.pt freguesia property listings"""
-        properties = []
-        error_details = []
-        
-        # Construct URLs for idealista.pt property search pages
-        concelho_clean = concelho.lower().replace(' ', '-').replace('_', '-')
-        freguesia_clean = freguesia.lower().replace(' ', '-').replace('_', '-')
-        
-        if operation_type == 'sale':
-            # URLs for different property types in sale
-            urls_to_scrape = [
-                {
-                    'url': f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos/",
-                    'property_type': 'apartment'
-                },
-                {
-                    'url': f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-moradias/",
-                    'property_type': 'house'
-                },
-                {
-                    'url': f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-urbano/",
-                    'property_type': 'urban_plot'
-                },
-                {
-                    'url': f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-nao-urbanizavel/",
-                    'property_type': 'rural_plot'
-                }
-            ]
-        else:
-            # URLs for rentals (no rural plots in rental)
-            urls_to_scrape = [
-                {
-                    'url': f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos,arrendamento-longa-duracao/",
-                    'property_type': 'apartment'
-                },
-                {
-                    'url': f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-moradias,arrendamento-longa-duracao/",
-                    'property_type': 'house'
-                }
-            ]
-        
-        logger.info(f"Scraping {len(urls_to_scrape)} property types for: {distrito}/{concelho}/{freguesia} ({operation_type})")
-        
-        all_properties = []
-        
-        for url_info in urls_to_scrape:
-            url = url_info['url']
-            property_type = url_info['property_type']
-            
-            logger.info(f"Scraping {property_type} from: {url}")
-            
-            try:
-                # Simulate scraping delay (realistic timing)
-                await asyncio.sleep(2)
-                
-                # Try real scraping first
-                average_price_per_sqm = None
-                real_data_found = False
-                scraping_error = None
-                
-                # Try Selenium if available
-                if self.driver is None:
-                    try:
-                        self.setup_driver()
-                    except Exception as e:
-                        scraping_error = f"Selenium setup failed: {str(e)}"
-                        logger.warning(scraping_error)
-                
-                if self.driver and not scraping_error:
-                    try:
-                        self.driver.get(url)
-                        await asyncio.sleep(3)
-                        
-                        # Check for CAPTCHA (realistic CAPTCHA simulation)
-                        if random.random() < 0.15:  # 15% chance of CAPTCHA
-                            scraping_error = "CAPTCHA detected - manual intervention required"
-                            logger.info(f"CAPTCHA detected during {property_type} scraping")
-                            
-                            # Save a mock CAPTCHA image for testing
-                            captcha_filename = self.save_mock_captcha_image(session_id)
-                            if captcha_filename and session_id:
-                                # Update session status to waiting_captcha
-                                await db.scraping_sessions.update_one(
-                                    {"id": session_id},
-                                    {"$set": {
-                                        "status": "waiting_captcha",
-                                        "captcha_image_path": captcha_filename,
-                                        "current_url": url
-                                    }}
-                                )
-                                
-                                logger.info("Session paused for CAPTCHA resolution...")
-                                await asyncio.sleep(8)
-                                
-                                # Auto-continue simulation
-                                await db.scraping_sessions.update_one(
-                                    {"id": session_id},
-                                    {"$set": {
-                                        "status": "running",
-                                        "captcha_image_path": None,
-                                        "current_url": None
-                                    }}
-                                )
-                                scraping_error = None  # Reset error after CAPTCHA resolution
-                        
-                        # Look for price information in the property listings
-                        if not scraping_error:
-                            try:
-                                # Search specifically for the "items-average-price" element
-                                zone_price_elements = self.driver.find_elements(By.CLASS_NAME, "items-average-price")
-                                
-                                zone_price_found = False
-                                for elem in zone_price_elements:
-                                    try:
-                                        price_text = elem.get_attribute('textContent') or elem.text
-                                        logger.info(f"Found items-average-price element: {price_text}")
-                                        
-                                        # Look for price pattern like "11,05 eur/m²" or "11.05 €/m²"
-                                        price_patterns = [
-                                            r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',  # "11,05 eur/m²"
-                                            r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',   # "11,05 €/m²"
-                                            r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?' # "11,05 euros/m²"
-                                        ]
-                                        
-                                        for pattern in price_patterns:
-                                            price_match = re.search(pattern, price_text, re.IGNORECASE)
-                                            if price_match:
-                                                price_str = price_match.group(1).replace(',', '.')
-                                                try:
-                                                    zone_price = float(price_str)
-                                                    if 0.5 <= zone_price <= 1000:  # Reasonable range for €/m² zone averages
-                                                        average_price_per_sqm = zone_price
-                                                        real_data_found = True
-                                                        zone_price_found = True
-                                                        logger.info(f"✅ REAL SCRAPED PRICE from items-average-price: {average_price_per_sqm:.2f} €/m²")
-                                                        break
-                                                except:
-                                                    continue
-                                        if zone_price_found:
-                                            break
-                                    except:
-                                        continue
-                                
-                                # If no items-average-price found, try alternative search for "Preço médio nesta zona"
-                                if not zone_price_found:
-                                    logger.info("items-average-price not found, trying text search for 'Preço médio nesta zona'...")
-                                    zone_text_elements = self.driver.find_elements(By.XPATH, 
-                                        "//*[contains(text(), 'Preço médio nesta zona') or contains(text(), 'preço médio nesta zona')]")
-                                    
-                                    for elem in zone_text_elements:
-                                        try:
-                                            # Check the element and its parent/siblings for price
-                                            elements_to_check = [elem]
-                                            parent = elem.find_element(By.XPATH, "..")
-                                            elements_to_check.append(parent)
-                                            siblings = parent.find_elements(By.XPATH, "./*")
-                                            elements_to_check.extend(siblings)
-                                            
-                                            for check_elem in elements_to_check:
-                                                price_text = check_elem.get_attribute('textContent') or check_elem.text
-                                                
-                                                # Look for price pattern
-                                                price_patterns = [
-                                                    r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
-                                                    r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
-                                                    r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?'
-                                                ]
-                                                
-                                                for pattern in price_patterns:
-                                                    price_match = re.search(pattern, price_text, re.IGNORECASE)
-                                                    if price_match:
-                                                        price_str = price_match.group(1).replace(',', '.')
-                                                        try:
-                                                            zone_price = float(price_str)
-                                                            if 0.5 <= zone_price <= 1000:
-                                                                average_price_per_sqm = zone_price
-                                                                real_data_found = True
-                                                                zone_price_found = True
-                                                                logger.info(f"✅ REAL SCRAPED PRICE from text search: {average_price_per_sqm:.2f} €/m²")
-                                                                break
-                                                        except:
-                                                            continue
-                                                if zone_price_found:
-                                                    break
-                                            if zone_price_found:
-                                                break
-                                        except:
-                                            continue
-                                        if zone_price_found:
-                                            break
-                                
-                                if not real_data_found:
-                                    scraping_error = "No 'items-average-price' element or 'Preço médio nesta zona' found on page"
-                                            
-                            except Exception as e:
-                                scraping_error = f"Selenium price extraction failed: {str(e)}"
-                                logger.warning(scraping_error)
-                            
-                    except Exception as e:
-                        scraping_error = f"Selenium page load failed: {str(e)}"
-                        logger.warning(scraping_error)
-                
-                # If Selenium failed, try requests fallback
-                if not real_data_found and not scraping_error:
-                    try:
-                        headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                            'Accept-Language': 'pt-PT,pt;q=0.9,en;q=0.8',
-                        }
-                        
-                        response = requests.get(url, headers=headers, timeout=10)
-                        
-                        if response.status_code == 200:
-                            # Look for price information in the HTML
-                            soup = BeautifulSoup(response.content, 'html.parser')
-                            
-                            # First, search for the specific "items-average-price" class
-                            zone_price_elements = soup.find_all(class_="items-average-price")
-                            zone_price_found = False
-                            
-                            for elem in zone_price_elements:
-                                try:
-                                    price_text = elem.get_text()
-                                    logger.info(f"Found items-average-price element: {price_text}")
-                                    
-                                    # Look for price patterns like "11,05 eur/m²"
-                                    price_patterns = [
-                                        r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',  # "11,05 eur/m²"
-                                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',   # "11,05 €/m²"
-                                        r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?' # "11,05 euros/m²"
-                                    ]
-                                    
-                                    for pattern in price_patterns:
-                                        price_match = re.search(pattern, price_text, re.IGNORECASE)
-                                        if price_match:
-                                            price_str = price_match.group(1).replace(',', '.')
-                                            try:
-                                                zone_price = float(price_str)
-                                                if 0.5 <= zone_price <= 1000:  # Reasonable range
-                                                    average_price_per_sqm = zone_price
-                                                    real_data_found = True
-                                                    zone_price_found = True
-                                                    logger.info(f"✅ REAL SCRAPED PRICE via requests from items-average-price: {average_price_per_sqm:.2f} €/m²")
-                                                    break
-                                            except:
-                                                continue
-                                        if zone_price_found:
-                                            break
-                                except:
-                                    continue
-                            
-                            # If no items-average-price found, search by text content
-                            if not zone_price_found:
-                                logger.info("items-average-price class not found, searching page text...")
-                                page_text = soup.get_text()
-                                
-                                # Look for "Preço médio nesta zona" pattern in text
-                                zone_patterns = [
-                                    r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
-                                    r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
-                                    r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
-                                    r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
-                                ]
-                                
-                                for pattern in zone_patterns:
-                                    zone_match = re.search(pattern, page_text, re.IGNORECASE)
-                                    if zone_match:
-                                        price_str = zone_match.group(1).replace(',', '.')
-                                        try:
-                                            zone_price = float(price_str)
-                                            if 0.5 <= zone_price <= 1000:
-                                                average_price_per_sqm = zone_price
-                                                real_data_found = True
-                                                zone_price_found = True
-                                                logger.info(f"✅ REAL SCRAPED PRICE via requests from text pattern: {average_price_per_sqm:.2f} €/m²")
-                                                break
-                                        except:
-                                            continue
-                                    if zone_price_found:
-                                        break
-                            
-                            if not real_data_found:
-                                scraping_error = "HTTP 200 received but no price data found on page"
-                                
-                        elif response.status_code == 403:
-                            scraping_error = "HTTP 403 Forbidden - Site is blocking requests"
-                        elif response.status_code == 429:
-                            scraping_error = "HTTP 429 Too Many Requests - Rate limited"
-                        elif response.status_code == 404:
-                            scraping_error = "HTTP 404 Not Found - URL might be invalid for this location"
-                        else:
-                            scraping_error = f"HTTP {response.status_code} - Request failed"
-                            
-                    except requests.exceptions.Timeout:
-                        scraping_error = "Request timeout - Site too slow to respond"
-                    except requests.exceptions.ConnectionError:
-                        scraping_error = "Connection error - Cannot reach idealista.pt"
-                    except Exception as e:
-                        scraping_error = f"Requests scraping failed: {str(e)}"
-                
-                # Create property entry ONLY if we have real scraped data
-                if real_data_found and average_price_per_sqm and average_price_per_sqm > 0:
-                    property_data = {
-                        'region': distrito,
-                        'location': f"{concelho}_{freguesia}",
-                        'property_type': property_type,  # Specific property type (apartment, house, urban_plot, rural_plot)
-                        'price': None,  # Individual property prices not available from zone averages
-                        'price_per_sqm': average_price_per_sqm,  # REAL scraped price from "Preço médio nesta zona"
-                        'area': None,  # Not applicable for zone averages
-                        'operation_type': operation_type,
-                        'url': url
-                    }
-                    
-                    all_properties.append(property_data)
-                    logger.info(f"✅ Added REAL SCRAPED {property_type} {operation_type}: {average_price_per_sqm:.2f} €/m² for {distrito}/{concelho}/{freguesia}")
-                else:
-                    # Record detailed error for this property type
-                    error_info = {
-                        'property_type': property_type,
-                        'operation_type': operation_type,
-                        'url': url,
-                        'error': scraping_error or "No real price data found",
-                        'timestamp': datetime.now(timezone.utc).isoformat()
-                    }
-                    error_details.append(error_info)
-                    logger.warning(f"❌ Failed to scrape {property_type} {operation_type} at {distrito}/{concelho}/{freguesia}: {scraping_error or 'No price data'}")
-                
-                # Add delay between property types to be respectful
-                await asyncio.sleep(1)
-                
-            except Exception as e:
-                error_info = {
-                    'property_type': property_type,
-                    'operation_type': operation_type,
-                    'url': url,
-                    'error': f"Unexpected error: {str(e)}",
-                    'timestamp': datetime.now(timezone.utc).isoformat()
-                }
-                error_details.append(error_info)
-                logger.error(f"Error scraping {property_type} from {url}: {e}")
-                continue
-        
-        # Update session with detailed results
-        if session_id:
-            zone_key = f"{distrito}/{concelho}/{freguesia}"
-            if all_properties:
-                # Success - add to success zones
-                await db.scraping_sessions.update_one(
-                    {"id": session_id},
-                    {"$push": {
-                        "success_zones": {
-                            "zone": zone_key,
-                            "operation_type": operation_type,
-                            "properties_count": len(all_properties),
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        }
-                    }}
-                )
-            
-            if error_details:
-                # Errors occurred - add to failed zones
-                await db.scraping_sessions.update_one(
-                    {"id": session_id},
-                    {"$push": {
-                        "failed_zones": {
-                            "zone": zone_key,
-                            "operation_type": operation_type,
-                            "errors": error_details,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        }
-                    }}
-                )
-        
-        return all_properties
-        """Scrape average price per m² from idealista.pt freguesia property listings"""
-        properties = []
-        
-        # Construct URLs for idealista.pt property search pages
-        concelho_clean = concelho.lower().replace(' ', '-').replace('_', '-')
-        freguesia_clean = freguesia.lower().replace(' ', '-').replace('_', '-')
-        
-        if operation_type == 'sale':
-            # URLs for different property types in sale
-            urls_to_scrape = [
-                {
-                    'url': f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos/",
-                    'property_type': 'apartment'
-                },
-                {
-                    'url': f"https://www.idealista.pt/comprar-casas/{concelho_clean}/{freguesia_clean}/com-moradias/",
-                    'property_type': 'house'
-                },
-                {
-                    'url': f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-urbano/",
-                    'property_type': 'urban_plot'
-                },
-                {
-                    'url': f"https://www.idealista.pt/comprar-terrenos/{concelho_clean}/{freguesia_clean}/com-terreno-nao-urbanizavel/",
-                    'property_type': 'rural_plot'
-                }
-            ]
-        else:
-            # URLs for rentals (no rural plots in rental)
-            urls_to_scrape = [
-                {
-                    'url': f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-apartamentos,arrendamento-longa-duracao/",
-                    'property_type': 'apartment'
-                },
-                {
-                    'url': f"https://www.idealista.pt/arrendar-casas/{concelho_clean}/{freguesia_clean}/com-moradias,arrendamento-longa-duracao/",
-                    'property_type': 'house'
-                }
-            ]
-        
-        logger.info(f"Scraping {len(urls_to_scrape)} property types for: {distrito}/{concelho}/{freguesia} ({operation_type})")
-        
-        all_properties = []
-        
-        for url_info in urls_to_scrape:
-            url = url_info['url']
-            property_type = url_info['property_type']
-            
-            logger.info(f"Scraping {property_type} from: {url}")
-            
-            try:
-                # Simulate scraping delay (realistic timing)
-                await asyncio.sleep(2)
-                
-                # Try real scraping first
-                average_price_per_sqm = None
-                real_data_found = False
-                
-                # Try Selenium if available
-                if self.driver is None:
-                    try:
-                        self.setup_driver()
-                    except:
-                        logger.warning("Selenium not available")
-                
-                if self.driver:
-                    try:
-                        self.driver.get(url)
-                        await asyncio.sleep(3)
-                        
-                        # Check for CAPTCHA (realistic CAPTCHA simulation)
-                        if random.random() < 0.15:  # 15% chance of CAPTCHA
-                            logger.info(f"CAPTCHA detected during {property_type} scraping")
-                            
-                            # Save a mock CAPTCHA image for testing
-                            captcha_filename = self.save_mock_captcha_image(session_id)
-                            if captcha_filename and session_id:
-                                # Update session status to waiting_captcha
-                                await db.scraping_sessions.update_one(
-                                    {"id": session_id},
-                                    {"$set": {
-                                        "status": "waiting_captcha",
-                                        "captcha_image_path": captcha_filename,
-                                        "current_url": url
-                                    }}
-                                )
-                                
-                                logger.info("Session paused for CAPTCHA resolution...")
-                                await asyncio.sleep(8)
-                                
-                                # Auto-continue simulation
-                                await db.scraping_sessions.update_one(
-                                    {"id": session_id},
-                                    {"$set": {
-                                        "status": "running",
-                                        "captcha_image_path": None,
-                                        "current_url": None
-                                    }}
-                                )
-                        
-                        # Look for price information in the property listings
-                        try:
-                            # Search specifically for the "items-average-price" element
-                            zone_price_elements = self.driver.find_elements(By.CLASS_NAME, "items-average-price")
-                            
-                            zone_price_found = False
-                            for elem in zone_price_elements:
-                                try:
-                                    price_text = elem.get_attribute('textContent') or elem.text
-                                    logger.info(f"Found items-average-price element: {price_text}")
-                                    
-                                    # Look for price pattern like "11,05 eur/m²" or "11.05 €/m²"
-                                    price_patterns = [
-                                        r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',  # "11,05 eur/m²"
-                                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',   # "11,05 €/m²"
-                                        r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?' # "11,05 euros/m²"
-                                    ]
-                                    
-                                    for pattern in price_patterns:
-                                        price_match = re.search(pattern, price_text, re.IGNORECASE)
-                                        if price_match:
-                                            price_str = price_match.group(1).replace(',', '.')
-                                            try:
-                                                zone_price = float(price_str)
-                                                if 0.5 <= zone_price <= 1000:  # Reasonable range for €/m² zone averages
-                                                    average_price_per_sqm = zone_price
-                                                    real_data_found = True
-                                                    zone_price_found = True
-                                                    logger.info(f"✅ REAL SCRAPED PRICE from items-average-price: {average_price_per_sqm:.2f} €/m²")
-                                                    break
-                                            except:
-                                                continue
-                                    if zone_price_found:
-                                        break
-                                except:
-                                    continue
-                            
-                            # If no items-average-price found, try alternative search for "Preço médio nesta zona"
-                            if not zone_price_found:
-                                logger.info("items-average-price not found, trying text search for 'Preço médio nesta zona'...")
-                                zone_text_elements = self.driver.find_elements(By.XPATH, 
-                                    "//*[contains(text(), 'Preço médio nesta zona') or contains(text(), 'preço médio nesta zona')]")
-                                
-                                for elem in zone_text_elements:
-                                    try:
-                                        # Check the element and its parent/siblings for price
-                                        elements_to_check = [elem]
-                                        parent = elem.find_element(By.XPATH, "..")
-                                        elements_to_check.append(parent)
-                                        siblings = parent.find_elements(By.XPATH, "./*")
-                                        elements_to_check.extend(siblings)
-                                        
-                                        for check_elem in elements_to_check:
-                                            price_text = check_elem.get_attribute('textContent') or check_elem.text
-                                            
-                                            # Look for price pattern
-                                            price_patterns = [
-                                                r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
-                                                r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
-                                                r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?'
-                                            ]
-                                            
-                                            for pattern in price_patterns:
-                                                price_match = re.search(pattern, price_text, re.IGNORECASE)
-                                                if price_match:
-                                                    price_str = price_match.group(1).replace(',', '.')
-                                                    try:
-                                                        zone_price = float(price_str)
-                                                        if 0.5 <= zone_price <= 1000:
-                                                            average_price_per_sqm = zone_price
-                                                            real_data_found = True
-                                                            zone_price_found = True
-                                                            logger.info(f"✅ REAL SCRAPED PRICE from text search: {average_price_per_sqm:.2f} €/m²")
-                                                            break
-                                                    except:
-                                                        continue
-                                            if zone_price_found:
-                                                break
-                                        if zone_price_found:
-                                            break
-                                    except:
-                                        continue
-                                    if zone_price_found:
-                                        break
-                                        
-                        except Exception as e:
-                            logger.warning(f"Could not extract real average price: {e}")
-                            
-                    except Exception as e:
-                        logger.warning(f"Selenium scraping failed: {e}")
-                
-                if not real_data_found:
-                    # Use requests fallback
-                    try:
-                        headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                            'Accept-Language': 'pt-PT,pt;q=0.9,en;q=0.8',
-                        }
-                        
-                        response = requests.get(url, headers=headers, timeout=10)
-                        if response.status_code == 200:
-                            # Look for price information in the HTML
-                            soup = BeautifulSoup(response.content, 'html.parser')
-                            
-                            # First, search for the specific "items-average-price" class
-                            zone_price_elements = soup.find_all(class_="items-average-price")
-                            zone_price_found = False
-                            
-                            for elem in zone_price_elements:
-                                try:
-                                    price_text = elem.get_text()
-                                    logger.info(f"Found items-average-price element: {price_text}")
-                                    
-                                    # Look for price patterns like "11,05 eur/m²"
-                                    price_patterns = [
-                                        r'(\d+(?:[.,]\d+)?)\s*eur?/?m²?',  # "11,05 eur/m²"
-                                        r'(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',   # "11,05 €/m²"
-                                        r'(\d+(?:[.,]\d+)?)\s*euros?\s*/?m²?' # "11,05 euros/m²"
-                                    ]
-                                    
-                                    for pattern in price_patterns:
-                                        price_match = re.search(pattern, price_text, re.IGNORECASE)
-                                        if price_match:
-                                            price_str = price_match.group(1).replace(',', '.')
-                                            try:
-                                                zone_price = float(price_str)
-                                                if 0.5 <= zone_price <= 1000:  # Reasonable range
-                                                    average_price_per_sqm = zone_price
-                                                    real_data_found = True
-                                                    zone_price_found = True
-                                                    logger.info(f"✅ REAL SCRAPED PRICE via requests from items-average-price: {average_price_per_sqm:.2f} €/m²")
-                                                    break
-                                            except:
-                                                continue
-                                    if zone_price_found:
-                                        break
-                                except:
-                                    continue
-                            
-                            # If no items-average-price found, search by text content
-                            if not zone_price_found:
-                                logger.info("items-average-price class not found, searching page text...")
-                                page_text = soup.get_text()
-                                
-                                # Look for "Preço médio nesta zona" pattern in text
-                                zone_patterns = [
-                                    r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
-                                    r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*eur?/?m²?',
-                                    r'preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?',
-                                    r'Preço médio nesta zona[:\s]*(\d+(?:[.,]\d+)?)\s*€\s*/?m²?'
-                                ]
-                                
-                                for pattern in zone_patterns:
-                                    zone_match = re.search(pattern, page_text, re.IGNORECASE)
-                                    if zone_match:
-                                        price_str = zone_match.group(1).replace(',', '.')
-                                        try:
-                                            zone_price = float(price_str)
-                                            if 0.5 <= zone_price <= 1000:
-                                                average_price_per_sqm = zone_price
-                                                real_data_found = True
-                                                zone_price_found = True
-                                                logger.info(f"✅ REAL SCRAPED PRICE via requests from text pattern: {average_price_per_sqm:.2f} €/m²")
-                                                break
-                                        except:
-                                            continue
-                                    if zone_price_found:
-                                        break
-                    except Exception as e:
-                        logger.warning(f"Requests scraping failed: {e}")
-                
-                # Create property entry ONLY if we have real scraped data
-                if real_data_found and average_price_per_sqm and average_price_per_sqm > 0:
-                    property_data = {
-                        'region': distrito,
-                        'location': f"{concelho}_{freguesia}",
-                        'property_type': property_type,  # Specific property type (apartment, house, urban_plot, rural_plot)
-                        'price': None,  # Individual property prices not available from zone averages
-                        'price_per_sqm': average_price_per_sqm,  # REAL scraped price from "Preço médio nesta zona"
-                        'area': None,  # Not applicable for zone averages
-                        'operation_type': operation_type,
-                        'url': url
-                    }
-                    
-                    all_properties.append(property_data)
-                    logger.info(f"✅ Added REAL SCRAPED {property_type} {operation_type}: {average_price_per_sqm:.2f} €/m² for {distrito}/{concelho}/{freguesia}")
-                else:
-                    logger.warning(f"❌ No real price data found for {property_type} {operation_type} at {distrito}/{concelho}/{freguesia} - SKIPPING (no simulated data)")
-                
-                # Add delay between property types to be respectful
-                await asyncio.sleep(1)
-                
-            except Exception as e:
-                logger.error(f"Error scraping {property_type} from {url}: {e}")
-                continue
-        
-        return all_properties
+        return all_properties, error_details
     
     def save_mock_captcha_image(self, session_id):
         """Save a mock CAPTCHA image for testing purposes"""
