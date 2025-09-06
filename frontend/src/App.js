@@ -448,6 +448,18 @@ function tagus_value_get_market_data() {
     }
   };
 
+  const fetchAdministrativeList = async () => {
+    setLoadingAdministrativeList(true);
+    try {
+      const response = await axios.get(`${API}/administrative/list`);
+      setAdministrativeList(response.data);
+    } catch (error) {
+      console.error('Error fetching administrative list:', error);
+    } finally {
+      setLoadingAdministrativeList(false);
+    }
+  };
+
   const generateIdealistaURL = (region, location, operationType) => {
     if (!region || !location) return null;
     
