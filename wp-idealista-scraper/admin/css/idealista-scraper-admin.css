@@ -1,0 +1,62 @@
+/**
+ * All of the CSS for your admin-specific functionality should be
+ * included in this file.
+ */
+
+#scraper-dashboard, #captcha-solver, #scraped-data {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ccd0d4;
+    background-color: #fff;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+#scraping-status, #scraped-data-container {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid #e5e5e5;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#captcha-image {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+}
+
+#captcha-solution {
+    margin-right: 10px;
+}
+
+.session-running {
+    color: #ffb900;
+}
+
+.session-completed {
+    color: #46b450;
+}
+
+.session-failed {
+    color: #dc3232;
+}
+
+.session-waiting_captcha {
+    color: #f56e28;
+}
+
+table.scraped-data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table.scraped-data-table th,
+table.scraped-data-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+table.scraped-data-table th {
+    background-color: #f2f2f2;
+}
