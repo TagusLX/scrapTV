@@ -1,0 +1,87 @@
+/* Styles for the Zone Management page in the Idealista Scraper plugin */
+
+#zone-selection-tree {
+    max-width: 800px;
+}
+
+.distrito-group {
+    border: 1px solid #ccd0d4;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.distrito-title {
+    font-size: 1.5em;
+    margin: 0 0 10px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.distrito-title:hover {
+    color: #0073aa;
+}
+
+.concelho-group {
+    margin-left: 20px;
+    border-left: 2px solid #f0f0f0;
+    padding-left: 15px;
+}
+
+.concelho-title {
+    font-size: 1.2em;
+    margin: 15px 0 5px 0;
+    cursor: pointer;
+}
+
+.concelho-title:hover {
+    color: #0073aa;
+}
+
+.freguesias-list {
+    list-style: none;
+    margin: 0;
+    padding-left: 20px;
+}
+
+.freguesias-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f9f9f9;
+}
+
+.freguesias-list li label {
+    display: inline-block;
+    min-width: 300px;
+}
+
+/* Hide containers by default, will be toggled by JS */
+.concelhos-container,
+.freguesias-list {
+    display: none;
+}
+
+.stats-info {
+    margin-left: 20px;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.stats-info .stat-item {
+    margin-right: 15px;
+    display: inline-block;
+}
+
+.stats-info .stat-item.sale {
+    color: #2271b1;
+}
+
+.stats-info .stat-item.rent {
+    color: #d63638;
+}
+
+.stats-info .no-data {
+    color: #999;
+    font-style: italic;
+}

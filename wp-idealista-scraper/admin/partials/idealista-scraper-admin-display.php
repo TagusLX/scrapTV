@@ -19,6 +19,11 @@
         <?php
         settings_fields('idealista_scraper_options');
         do_settings_sections('idealista-scraper-options');
+
+        // Add new sections for scraper configuration
+        do_settings_sections('idealista-scraper-speed');
+        do_settings_sections('idealista-scraper-advanced');
+
         submit_button();
         ?>
     </form>
