@@ -44,15 +44,6 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
-# Define configuration models
-class ScraperConfig(BaseModel):
-    intensity: str = "medium"  # Can be 'low', 'medium', 'high'
-    proxies: List[str] = []
-    user_agents: List[str] = []
-
-# Global scraper configuration, initialized with defaults
-scraper_config = ScraperConfig()
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -622,22 +613,12 @@ class AnonymousBeautifulSoupScraper:
     async def initialize_anonymous_session(self, session_id):
         """Initialize a completely anonymous session with realistic Portuguese user behavior"""
         self.current_session_id = session_id
-        
-        # Use custom user agents from config if available
-        if scraper_config.user_agents:
-            self.current_profile = {
-                'name': 'Custom_User_Agent',
-                'user_agent': random.choice(scraper_config.user_agents),
-                'accept_language': 'pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-                'browsing_pattern': 'goal_oriented'
-            }
-            logger.info(f"🇵🇹 Initializing anonymous session with custom User-Agent: {self.current_profile['user_agent']}")
-        else:
-            self.current_profile = random.choice(self.portuguese_profiles)
-            logger.info(f"🇵🇹 Initializing anonymous session: {self.current_profile['name']}")
-            logger.info(f"   Location: {self.current_profile['location']}")
-            logger.info(f"   Pattern: {self.current_profile['browsing_pattern']}")
+        self.current_profile = random.choice(self.portuguese_profiles)
 
+        logger.info(f"🇵🇹 Initializing anonymous session: {self.current_profile['name']}")
+        logger.info(f"   Location: {self.current_profile['location']}")
+        logger.info(f"   Pattern: {self.current_profile['browsing_pattern']}")
+        
         # Clear any previous session data
         self.session.cookies.clear()
         self.session.headers.clear()
@@ -843,18 +824,9 @@ class AnonymousBeautifulSoupScraper:
             interruption_time = random.uniform(15, 120)  # 15s to 2min
             logger.info(f"☕ User interruption: {interruption_time:.1f}s (phone/coffee/distraction)")
             await asyncio.sleep(interruption_time)
-
-        # Adjust delay based on configured intensity
-        intensity_multipliers = {
-            "slow": 1.5,
-            "moderate": 1.0,
-            "fast": 0.5
-        }
-        multiplier = intensity_multipliers.get(scraper_config.intensity, 1.0)
-        final_delay = base_delay * multiplier
-        logger.info(f"⚡️ Intensity '{scraper_config.intensity}' applied (x{multiplier:.2f}). Final delay: {final_delay:.1f}s")
         
-        await asyncio.sleep(final_delay)
+        logger.info(f"⏱️ Anonymous delay: {base_delay:.1f}s")
+        await asyncio.sleep(base_delay)
         
         self.last_request_time = time.time()
     
@@ -1004,27 +976,10 @@ class AnonymousBeautifulSoupScraper:
         
         # Smart anonymous delay
         await self.anonymous_delay()
-
-        proxies = None
-        if scraper_config.proxies:
-            try:
-                proxy_address = random.choice(scraper_config.proxies)
-                if not proxy_address.startswith('http'):
-                    proxy_address = f'http://{proxy_address}'
-
-                proxies = {
-                    "http": proxy_address,
-                    "https": proxy_address,
-                }
-                log_proxy = re.sub(r'//.*@', '//', proxy_address)
-                logger.info(f"🔄 Using proxy: {log_proxy}")
-
-            except IndexError:
-                logger.warning("Proxy list is configured but empty.")
         
         try:
-            # Make request with current anonymous session and proxy
-            response = self.session.get(url, timeout=20, proxies=proxies)
+            # Make request with current anonymous session
+            response = self.session.get(url, timeout=20)
             
             logger.info(f"📡 Response: {response.status_code} - {len(response.content)} bytes")
             
@@ -2565,26 +2520,39 @@ class IdealistaScraper:
 
 scraper = IdealistaScraper()
 
-class ScrapeRequest(BaseModel):
-    zones: List[str]
-
-@api_router.post("/scrape/start")
-async def start_scraping(request: ScrapeRequest, background_tasks: BackgroundTasks):
-    """Start a new scraping session for the selected zones."""
-    if not request.zones:
-        raise HTTPException(status_code=400, detail="No zones provided for scraping.")
+@api_router.post("/scrape/targeted")
+async def start_targeted_scraping(
+    background_tasks: BackgroundTasks,
+    distrito: Optional[str] = None,
+    concelho: Optional[str] = None,
+    freguesia: Optional[str] = None
+):
+    """Start a targeted scraping session for specific administrative level"""
+    if not distrito:
+        raise HTTPException(status_code=400, detail="Distrito is required")
 
     session = ScrapingSession(status="running")
     session_dict = session.dict()
     await db.scraping_sessions.insert_one(session_dict)
     
-    background_tasks.add_task(run_scraping_task, session.id, request.zones)
+    background_tasks.add_task(run_targeted_scraping_task, session.id, distrito, concelho, freguesia)
     
-    return {"message": f"Scraping started for {len(request.zones)} zones", "session_id": session.id}
+    target_description = distrito
+    if concelho:
+        target_description += f" > {concelho}"
+    if freguesia:
+        target_description += f" > {freguesia}"
 
-async def run_scraping_task(session_id: str, zones: List[str]):
-    """Background task to run the scraping with a specific list of zones."""
+    return {
+        "message": f"Scraping ciblé démarré pour: {target_description}",
+        "session_id": session.id,
+        "target": {"distrito": distrito, "concelho": concelho, "freguesia": freguesia}
+    }
+
+async def run_targeted_scraping_task(session_id: str, distrito: str, concelho: Optional[str] = None, freguesia: Optional[str] = None):
+    """Background task for targeted scraping"""
     try:
+        # Update session status
         await db.scraping_sessions.update_one(
             {"id": session_id},
             {"$set": {"status": "running"}}
@@ -2593,56 +2561,123 @@ async def run_scraping_task(session_id: str, zones: List[str]):
         total_properties = 0
         regions_scraped = []
         
+        # Initialize scraper with session ID
         scraper.session_id = session_id
         
-        logger.info(f"Starting targeted scraping of {len(zones)} selected zones.")
+        # Get the administrative structure
+        logger.info("Fetching administrative structure for targeted scraping...")
+        structure = await scraper.get_administrative_structure()
         
-        for zone_string in zones:
-            # Expected format: "distrito/concelho/freguesia"
-            parts = zone_string.split('/')
-            if len(parts) != 3:
-                logger.warning(f"Skipping invalid zone format: {zone_string}")
-                continue
+        if not structure or distrito not in structure:
+            await db.scraping_sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "status": "failed",
+                    "completed_at": datetime.now(timezone.utc),
+                    "error_message": f"Distrito '{distrito}' not found in administrative structure"
+                }}
+            )
+            return
 
-            distrito, concelho, freguesia = parts
+        distrito_data = structure[distrito]
 
-            # Check for CAPTCHA pause
-            session_data = await db.scraping_sessions.find_one({"id": session_id})
-            if session_data and session_data.get('status') == 'waiting_captcha':
-                logger.info("Session paused for CAPTCHA, waiting...")
-                while True:
-                    await asyncio.sleep(5)
-                    session_data = await db.scraping_sessions.find_one({"id": session_id})
-                    if session_data.get('status') != 'waiting_captcha':
-                        logger.info("Resuming scraping after CAPTCHA.")
-                        break
-
-            try:
-                logger.info(f"Processing: {distrito}/{concelho}/{freguesia}")
+        if freguesia and concelho:
+            # Scrape specific freguesia
+            if concelho in distrito_data and freguesia in distrito_data[concelho]:
+                logger.info(f"Scraping specific freguesia: {distrito}/{concelho}/{freguesia}")
                 
                 # Scrape sales data
-                sale_properties, sale_errors = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'sale', session_id=session_id)
+                sale_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'sale', session_id=session_id)
                 for prop_data in sale_properties:
                     property_obj = Property(**prop_data)
                     await db.properties.insert_one(property_obj.dict())
                     total_properties += 1
                 
                 # Scrape rental data
-                rent_properties, rent_errors = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'rent', session_id=session_id)
+                rent_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'rent', session_id=session_id)
                 for prop_data in rent_properties:
                     property_obj = Property(**prop_data)
                     await db.properties.insert_one(property_obj.dict())
                     total_properties += 1
-
-                regions_scraped.append(zone_string)
-                await asyncio.sleep(0.5)
                 
-            except Exception as e:
-                logger.error(f"Error scraping {zone_string}: {e}")
-                continue
+                regions_scraped.append(f"{distrito}/{concelho}/{freguesia}")
+            else:
+                raise Exception(f"Freguesia '{freguesia}' not found in {distrito}/{concelho}")
+
+        elif concelho:
+            # Scrape all freguesias in concelho
+            if concelho in distrito_data:
+                logger.info(f"Scraping all freguesias in concelho: {distrito}/{concelho}")
+                freguesias_list = distrito_data[concelho]
+
+                for freguesia_name in freguesias_list:
+                    try:
+                        logger.info(f"Processing: {distrito}/{concelho}/{freguesia_name}")
+
+                        # Scrape sales and rental data for this freguesia
+                        sale_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia_name, 'sale', session_id=session_id)
+                        for prop_data in sale_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+
+                        rent_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia_name, 'rent', session_id=session_id)
+                        for prop_data in rent_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+
+                        regions_scraped.append(f"{distrito}/{concelho}/{freguesia_name}")
+
+                        # Small delay between freguesias
+                        await asyncio.sleep(1)
+
+                    except Exception as e:
+                        logger.error(f"Error scraping freguesia {freguesia_name}: {e}")
+                        continue
+            else:
+                raise Exception(f"Concelho '{concelho}' not found in distrito '{distrito}'")
+
+        else:
+            # Scrape all concelhos and freguesias in distrito
+            logger.info(f"Scraping all concelhos in distrito: {distrito}")
+
+            for concelho_name, freguesias_list in distrito_data.items():
+                logger.info(f"Processing concelho: {distrito}/{concelho_name} ({len(freguesias_list)} freguesias)")
+
+                for freguesia_name in freguesias_list:
+                    try:
+                        logger.info(f"Processing: {distrito}/{concelho_name}/{freguesia_name}")
+
+                        # Scrape sales and rental data
+                        sale_properties = await scraper.scrape_freguesia(distrito, concelho_name, freguesia_name, 'sale', session_id=session_id)
+                        for prop_data in sale_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+
+                        rent_properties = await scraper.scrape_freguesia(distrito, concelho_name, freguesia_name, 'rent', session_id=session_id)
+                        for prop_data in rent_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+
+                        regions_scraped.append(f"{distrito}/{concelho_name}/{freguesia_name}")
+
+                        # Small delay between freguesias
+                        await asyncio.sleep(1)
+
+                    except Exception as e:
+                        logger.error(f"Error scraping freguesia {freguesia_name}: {e}")
+                        continue
+
+                # Delay between concelhos
+                await asyncio.sleep(2)
         
+        # Clean up driver
         scraper.close_driver()
         
+        # Update session as completed
         await db.scraping_sessions.update_one(
             {"id": session_id},
             {"$set": {
@@ -2653,10 +2688,10 @@ async def run_scraping_task(session_id: str, zones: List[str]):
             }}
         )
         
-        logger.info(f"Targeted scraping completed: Scraped {len(regions_scraped)} zones.")
+        logger.info(f"Targeted scraping completed: {total_properties} properties from {len(regions_scraped)} regions")
         
     except Exception as e:
-        logger.error(f"Scraping task failed: {e}")
+        logger.error(f"Targeted scraping failed: {e}")
         scraper.close_driver()
         await db.scraping_sessions.update_one(
             {"id": session_id},
@@ -2743,6 +2778,134 @@ async def get_detailed_coverage():
     detailed_coverage["overview"]["scraped_freguesias"] = sum(d["scraped_freguesias"] for d in detailed_coverage["by_distrito"])
     
     return detailed_coverage
+
+@api_router.post("/scrape/start")
+async def start_scraping(background_tasks: BackgroundTasks):
+    """Start a new scraping session"""
+    session = ScrapingSession(status="running")
+    session_dict = session.dict()
+    await db.scraping_sessions.insert_one(session_dict)
+
+    background_tasks.add_task(run_scraping_task, session.id)
+
+    return {"message": "Scraping started", "session_id": session.id}
+
+async def run_scraping_task(session_id: str):
+    """Background task to run the scraping with full administrative structure"""
+    try:
+        # Update session status
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {"status": "running"}}
+        )
+
+        total_properties = 0
+        districts_scraped = []
+
+        # Initialize scraper with session ID
+        scraper.session_id = session_id
+
+        # Get the administrative structure from idealista.pt
+        logger.info("Fetching Portuguese administrative structure...")
+        structure = await scraper.get_administrative_structure()
+
+        if not structure:
+            logger.error("Could not obtain administrative structure")
+            await db.scraping_sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "status": "failed",
+                    "completed_at": datetime.now(timezone.utc),
+                    "error_message": "Could not obtain Portuguese administrative structure"
+                }}
+            )
+            return
+
+        logger.info(f"Starting comprehensive scraping of {len(structure)} districts")
+
+        # Scrape all districts, concelhos, and freguesias
+        for distrito, concelhos in structure.items():
+            districts_scraped.append(distrito)
+            logger.info(f"Scraping distrito: {distrito} ({len(concelhos)} concelhos)")
+
+            for concelho, freguesias in concelhos.items():
+                logger.info(f"Scraping concelho: {concelho} ({len(freguesias)} freguesias)")
+
+                # Limit freguesias for demonstration (remove this limit for full scraping)
+                limited_freguesias = freguesias[:3]  # Only first 3 freguesias per concelho
+
+                for freguesia in limited_freguesias:
+                    # Check if session is still running (not paused for CAPTCHA)
+                    session_data = await db.scraping_sessions.find_one({"id": session_id})
+                    if session_data and session_data.get('status') == 'waiting_captcha':
+                        logger.info("Session paused for CAPTCHA, waiting...")
+                        # Wait for CAPTCHA resolution
+                        while True:
+                            await asyncio.sleep(5)
+                            session_data = await db.scraping_sessions.find_one({"id": session_id})
+                            if session_data.get('status') != 'waiting_captcha':
+                                break
+
+                    try:
+                        logger.info(f"Processing: {distrito}/{concelho}/{freguesia}")
+
+                        # Scrape sales data for this administrative unit
+                        sale_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'sale', session_id=session_id)
+                        for prop_data in sale_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+
+                        # Scrape rental data for this administrative unit
+                        rent_properties = await scraper.scrape_freguesia(distrito, concelho, freguesia, 'rent', session_id=session_id)
+                        for prop_data in rent_properties:
+                            property_obj = Property(**prop_data)
+                            await db.properties.insert_one(property_obj.dict())
+                            total_properties += 1
+
+                        # Small delay between freguesias to be respectful
+                        await asyncio.sleep(0.5)
+
+                    except Exception as e:
+                        logger.error(f"Error scraping {distrito}/{concelho}/{freguesia}: {e}")
+                        continue
+
+                # Delay between concelhos
+                await asyncio.sleep(1)
+
+            # Delay between districts
+            await asyncio.sleep(2)
+
+            # Log progress
+            logger.info(f"Completed distrito {distrito}. Total properties so far: {total_properties}")
+
+        # Clean up driver
+        scraper.close_driver()
+
+        # Update session as completed
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc),
+                "total_properties": total_properties,
+                "regions_scraped": districts_scraped
+            }}
+        )
+
+        logger.info(f"Administrative scraping completed: {total_properties} administrative units processed")
+
+    except Exception as e:
+        logger.error(f"Administrative scraping failed: {e}")
+        scraper.close_driver()
+        await db.scraping_sessions.update_one(
+            {"id": session_id},
+            {"$set": {
+                "status": "failed",
+                "completed_at": datetime.now(timezone.utc),
+                "error_message": str(e)
+            }}
+        )
 
 @api_router.get("/captcha/{session_id}")
 async def get_captcha_image(session_id: str):
@@ -3201,40 +3364,39 @@ async def get_detailed_stats(
         
         if key not in location_stats:
             display_info = format_administrative_display(result['_id']['region'], result['_id']['location'])
-            location_stats[key] = {
-                "region": result['_id']['region'],
-                "location": result['_id']['location'],
-                "display_info": display_info,
-                "total_properties": 0,
-                "avg_sale_price_per_sqm": 0,
-                "avg_rent_price_per_sqm": 0,
-                "detailed_stats": []
-            }
+            location_stats[key] = ExtendedRegionStats(
+                region=result['_id']['region'],
+                location=result['_id']['location'],
+                display_info=display_info,
+                detailed_stats=[]
+            )
         
         # Add detailed stat
-        detailed_stat = {
-            "property_type": result['_id']['property_type'],
-            "operation_type": result['_id']['operation_type'],
-            "avg_price_per_sqm": result['avg_price_per_sqm'],
-            "avg_price": result['avg_price'],
-            "count": result['count']
-        }
-        location_stats[key]["detailed_stats"].append(detailed_stat)
+        detailed_stat = DetailedPropertyStats(
+            property_type=result['_id']['property_type'],
+            operation_type=result['_id']['operation_type'],
+            avg_price_per_sqm=result['avg_price_per_sqm'],
+            avg_price=result['avg_price'],
+            count=result['count']
+        )
+        location_stats[key].detailed_stats.append(detailed_stat)
         
-        # Update general stats
-        location_stats[key]["total_properties"] += result['count']
+        # Update general stats for backward compatibility
+        location_stats[key].total_properties += result['count']
         
         if result['_id']['operation_type'] == 'sale' and result['avg_price_per_sqm']:
-            # This logic for averaging averages is flawed, but we'll keep it for now for consistency
-            if location_stats[key].get("avg_sale_price_per_sqm"):
-                 location_stats[key]["avg_sale_price_per_sqm"] = (location_stats[key]["avg_sale_price_per_sqm"] + result['avg_price_per_sqm']) / 2
+            if location_stats[key].avg_sale_price_per_sqm:
+                location_stats[key].avg_sale_price_per_sqm = (location_stats[key].avg_sale_price_per_sqm + result['avg_price_per_sqm']) / 2
             else:
-                 location_stats[key]["avg_sale_price_per_sqm"] = result['avg_price_per_sqm']
+                location_stats[key].avg_sale_price_per_sqm = result['avg_price_per_sqm']
 
-    # Convert dictionary to list of Pydantic models for response validation
-    final_list = [ExtendedRegionStats(**stat) for stat in location_stats.values()]
+        if result['_id']['operation_type'] == 'rent' and result['avg_price_per_sqm']:
+            if location_stats[key].avg_rent_price_per_sqm:
+                location_stats[key].avg_rent_price_per_sqm = (location_stats[key].avg_rent_price_per_sqm + result['avg_price_per_sqm']) / 2
+            else:
+                location_stats[key].avg_rent_price_per_sqm = result['avg_price_per_sqm']
     
-    return final_list
+    return list(location_stats.values())
 
 @api_router.get("/administrative/list")
 async def get_administrative_list():
@@ -3725,23 +3887,6 @@ def format_administrative_display(region, location):
             'freguesia': '',
             'full_display': f"{region.replace('-', ' ').title()} > {location.replace('-', ' ').title()}"
         }
-
-@api_router.post("/config")
-async def update_scraper_config(config: ScraperConfig):
-    """Update the global scraper configuration"""
-    global scraper_config
-    scraper_config = config
-    logger.info(f"Updated scraper configuration: Intensity={config.intensity}, Proxies={len(config.proxies)}, User-Agents={len(config.user_agents)}")
-    if config.proxies:
-        logger.info(f"First proxy: {config.proxies[0] if config.proxies else 'None'}")
-    if config.user_agents:
-        logger.info(f"First user agent: {config.user_agents[0] if config.user_agents else 'None'}")
-    return {"message": "Configuration updated successfully"}
-
-@api_router.get("/config", response_model=ScraperConfig)
-async def get_scraper_config():
-    """Get the current scraper configuration"""
-    return scraper_config
 
 # Include the router in the main app
 app.include_router(api_router)
