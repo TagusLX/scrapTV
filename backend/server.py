@@ -31,6 +31,36 @@ import random
 
 
 ROOT_DIR = Path(__file__).parent
+DATA_FILE = ROOT_DIR.parent / 'wp-idealista-scraper' / 'includes' / 'data' / 'portugal_administrative_structure.json'
+
+def load_market_data():
+    """Loads the market data structure from the JSON file."""
+    try:
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            logger.info(f"Loaded {len(data.get('php_array', {}))} districts from JSON file.")
+            return data
+    except (FileNotFoundError, json.JSONDecodeError):
+        logger.error("Failed to load market data JSON file.")
+        return {}
+
+def save_market_data(data):
+    """Saves the market data structure to the JSON file."""
+    try:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except IOError as e:
+        logger.error(f"Failed to save market data JSON file: {e}")
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Load data on startup
+market_data_structure = load_market_data()
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
@@ -43,13 +73,6 @@ app = FastAPI()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # Create captcha images directory
 CAPTCHA_DIR = ROOT_DIR / 'captcha_images'
@@ -128,11 +151,116 @@ class ExtendedRegionStats(BaseModel):
     # Detailed stats by property type and operation
     detailed_stats: List[DetailedPropertyStats] = []
 
+class MarketDataUpdate(BaseModel):
+    url: str
+    last_update: str
+    average_t0_sale: int
+    average_t1_sale: int
+    average_t2_sale: int
+    average_t3_sale: int
+    average_t4_sale: int
+    average_t5_sale: int
+    average_t0_rent: int
+    average_t1_rent: int
+    average_t2_rent: int
+    average_t3_rent: int
+    average_t4_rent: int
+    average_t5_rent: int
+    average_new_houses_sale: int
+    average_good_condition_houses_sale: int
+    average_to_renovate_houses_sale: int
+    average_new_apartments_sale: int
+    average_good_condition_apartments_sale: int
+    average_to_renovate_apartments_sale: int
+    average_buildable_land_sale: int
+    average_agricultural_land_sale: int
+
 @api_router.delete("/properties")
 async def clear_all_properties():
     """Clear all scraped properties"""
     result = await db.properties.delete_many({})
     return {"message": f"Deleted {result.deleted_count} properties"}
+
+def find_by_code(data_dict, code):
+    """Find an item in a dictionary by its 'code' field."""
+    for key, value in data_dict.items():
+        if isinstance(value, dict) and value.get("code") == code:
+            return value
+    return None
+
+@api_router.get("/market-data")
+async def get_market_data(
+    distrito: Optional[str] = None,
+    concelho: Optional[str] = None,
+    freguesia: Optional[str] = None
+):
+    """
+    Get market data for a specific administrative level.
+    The data is read from the portugal_administrative_structure.json file.
+    """
+    data = market_data_structure.get("php_array", {})
+
+    if distrito:
+        distrito_data = find_by_code(data, distrito)
+        if not distrito_data:
+            raise HTTPException(status_code=404, detail="Distrito not found")
+        data = distrito_data
+        if concelho:
+            concelho_data = find_by_code(data.get("freguesias", {}), concelho)
+            if not concelho_data:
+                raise HTTPException(status_code=404, detail="Concelho not found")
+            data = concelho_data
+            if freguesia:
+                freguesia_data = find_by_code(data.get("freguesias", {}), freguesia)
+                if not freguesia_data:
+                    raise HTTPException(status_code=404, detail="Freguesia not found")
+                data = freguesia_data
+    return data
+
+@api_router.post("/market-data")
+async def update_market_data(
+    update_data: MarketDataUpdate,
+    distrito: str,
+    concelho: Optional[str] = None,
+    freguesia: Optional[str] = None
+):
+    """
+    Update market data for a specific administrative level.
+    This will rewrite the portugal_administrative_structure.json file.
+    """
+    global market_data_structure
+    data = market_data_structure
+    data_ptr = data.get("php_array", {})
+
+    target_level = find_by_code(data_ptr, distrito)
+    if not target_level:
+        raise HTTPException(status_code=404, detail="Distrito not found")
+
+    if concelho:
+        concelho_data = find_by_code(target_level.get("freguesias", {}), concelho)
+        if not concelho_data:
+            raise HTTPException(status_code=404, detail="Concelho not found")
+        target_level = concelho_data
+        if freguesia:
+            freguesia_data = find_by_code(target_level.get("freguesias", {}), freguesia)
+            if not freguesia_data:
+                raise HTTPException(status_code=404, detail="Freguesia not found")
+            target_level = freguesia_data
+
+    # Update the fields
+    update_data_dict = update_data.dict()
+    for key, value in update_data_dict.items():
+        if key in target_level:
+            target_level[key] = value
+
+    save_market_data(data)
+
+    # Reload data into memory
+    new_data = load_market_data()
+    market_data_structure.clear()
+    market_data_structure.update(new_data)
+
+    return {"message": "Market data updated successfully"}
 
 class CoverageStats(BaseModel):
     distrito: str
@@ -3790,15 +3918,14 @@ async def run_missing_scraping_task(session_id: str, distrito: str, missing_area
 @api_router.get("/administrative/districts")
 async def get_districts():
     """Get all available districts"""
-    if not scraper.administrative_structure:
-        await scraper.get_administrative_structure()
-    
+    data = market_data_structure.get("php_array", {})
+    logger.info(f"get_districts: {len(data)} districts in market_data_structure.")
     districts = []
-    for district_name in scraper.administrative_structure.keys():
+    for district_name, district_data in data.items():
         districts.append({
-            'id': district_name,
-            'name': district_name.replace('-', ' ').title(),
-            'name_display': district_name.replace('-', ' ').title()
+            'id': district_data.get('code', ''),
+            'name': district_data.get('name', ''),
+            'name_display': district_data.get('name', '')
         })
     
     return {"districts": sorted(districts, key=lambda x: x['name'])}
@@ -3806,48 +3933,48 @@ async def get_districts():
 @api_router.get("/administrative/districts/{district}/concelhos")
 async def get_concelhos(district: str):
     """Get all concelhos for a specific district"""
-    if not scraper.administrative_structure:
-        await scraper.get_administrative_structure()
+    data = market_data_structure.get("php_array", {})
+    distrito_data = find_by_code(data, district)
     
-    if district not in scraper.administrative_structure:
+    if not distrito_data:
         raise HTTPException(status_code=404, detail=f"District {district} not found")
     
     concelhos = []
-    for concelho_name in scraper.administrative_structure[district].keys():
+    for concelho_name, concelho_data in distrito_data.get("freguesias", {}).items():
         concelhos.append({
-            'id': concelho_name,
-            'name': concelho_name.replace('-', ' ').title(),
-            'name_display': concelho_name.replace('-', ' ').title()
+            'id': concelho_data.get('code', ''),
+            'name': concelho_data.get('name', ''),
+            'name_display': concelho_data.get('name', '')
         })
     
     return {
-        "district": district.replace('-', ' ').title(),
+        "district": distrito_data.get('name', ''),
         "concelhos": sorted(concelhos, key=lambda x: x['name'])
     }
 
 @api_router.get("/administrative/districts/{district}/concelhos/{concelho}/freguesias")
 async def get_freguesias(district: str, concelho: str):
     """Get all freguesias for a specific distrito/concelho"""
-    if not scraper.administrative_structure:
-        await scraper.get_administrative_structure()
-    
-    if district not in scraper.administrative_structure:
+    data = market_data_structure.get("php_array", {})
+    distrito_data = find_by_code(data, district)
+    if not distrito_data:
         raise HTTPException(status_code=404, detail=f"District {district} not found")
-    
-    if concelho not in scraper.administrative_structure[district]:
+
+    concelho_data = find_by_code(distrito_data.get("freguesias", {}), concelho)
+    if not concelho_data:
         raise HTTPException(status_code=404, detail=f"Concelho {concelho} not found in {district}")
     
     freguesias = []
-    for freguesia_name in scraper.administrative_structure[district][concelho]:
+    for freguesia_name, freguesia_data in concelho_data.get("freguesias", {}).items():
         freguesias.append({
-            'id': freguesia_name,
-            'name': freguesia_name.replace('-', ' ').replace('_', ' ').title(),
-            'name_display': format_freguesia_name(freguesia_name)
+            'id': freguesia_data.get('code', ''),
+            'name': freguesia_data.get('name', ''),
+            'name_display': format_freguesia_name(freguesia_data.get('name', ''))
         })
     
     return {
-        "district": district.replace('-', ' ').title(),
-        "concelho": concelho.replace('-', ' ').title(), 
+        "district": distrito_data.get('name', ''),
+        "concelho": concelho_data.get('name', ''),
         "freguesias": sorted(freguesias, key=lambda x: x['name'])
     }
 
