@@ -17,16 +17,6 @@ import asyncio
 import time
 import json
 import re
-import base64
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from webdriver_manager.chrome import ChromeDriverManager
-import tempfile
 import random
 
 
@@ -2596,55 +2586,6 @@ class IdealistaScraper:
         
         return all_properties, error_details
     
-    def save_mock_captcha_image(self, session_id):
-        """Save a mock CAPTCHA image for testing purposes"""
-        if not session_id:
-            return None
-            
-        try:
-            import base64
-            from PIL import Image, ImageDraw, ImageFont
-            import io
-            
-            # Create a simple mock CAPTCHA image
-            img = Image.new('RGB', (200, 80), color='white')
-            draw = ImageDraw.Draw(img)
-            
-            # Add some simple text as mock CAPTCHA
-            captcha_text = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', k=5))
-            
-            try:
-                # Try to use a default font
-                font = ImageFont.load_default()
-            except:
-                font = None
-            
-            # Draw the CAPTCHA text
-            draw.text((50, 30), captcha_text, fill='black', font=font)
-            
-            # Add some noise lines
-            for _ in range(5):
-                x1, y1 = random.randint(0, 200), random.randint(0, 80)
-                x2, y2 = random.randint(0, 200), random.randint(0, 80)
-                draw.line([(x1, y1), (x2, y2)], fill='gray', width=1)
-            
-            # Save the image
-            captcha_path = CAPTCHA_DIR / f"mock_captcha_{session_id}.png"
-            img.save(captcha_path)
-            
-            logger.info(f"Mock CAPTCHA saved: {captcha_path}")
-            return f"mock_captcha_{session_id}.png"
-            
-        except Exception as e:
-            logger.error(f"Error creating mock CAPTCHA: {e}")
-            # Fallback: create a simple text file
-            try:
-                captcha_path = CAPTCHA_DIR / f"mock_captcha_{session_id}.txt"
-                with open(captcha_path, 'w') as f:
-                    f.write("MOCK CAPTCHA - Enter any text to continue")
-                return f"mock_captcha_{session_id}.txt"
-            except:
-                return None
 
 scraper = IdealistaScraper()
 
@@ -4014,130 +3955,6 @@ def format_administrative_display(region, location):
             'freguesia': '',
             'full_display': f"{region.replace('-', ' ').title()} > {location.replace('-', ' ').title()}"
         }
-
-# --- Jules's Price Report Scraping Logic ---
-import urllib.parse
-
-# Global status tracker for the report scraping task
-report_scraping_status = {
-    "status": "idle",  # idle, running, completed, failed
-    "progress": "",
-    "error_message": None,
-    "last_updated": None
-}
-
-def get_report_price(soup):
-    """Extracts the price from the 'stats-text-container' div on Idealista report pages."""
-    price_container = soup.find('div', class_='stats-text-container')
-    if price_container:
-        price_strong_tag = price_container.find('strong')
-        if price_strong_tag:
-            price_text = price_strong_tag.text.strip().replace('.', '').replace(',', '.')
-            try:
-                return int(float(price_text))
-            except (ValueError, TypeError):
-                return 0
-    return 0
-
-def scrape_report_with_scraperapi(target_url, api_key):
-    """Scrapes a single URL using the ScraperAPI service."""
-    encoded_url = urllib.parse.quote(target_url)
-    api_url = f"http://api.scraperapi.com?api_key={api_key}&url={encoded_url}&country_code=pt&ultra_premium=true"
-    try:
-        response = requests.get(api_url, timeout=120)
-        if response.status_code == 200:
-            return BeautifulSoup(response.content, 'html.parser')
-        else:
-            logger.error(f"ScraperAPI returned status {response.status_code} for {target_url}")
-            return None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request to ScraperAPI failed for {target_url}: {e}")
-        return None
-
-def scrape_location_prices_from_report(location_code, api_key):
-    """Scrapes sale and rent prices for a single location from media reports."""
-    sale_url = f"https://www.idealista.pt/media/relatorios-preco-habitacao/venda/{location_code}/"
-    sale_soup = scrape_report_with_scraperapi(sale_url, api_key)
-    sale_price = get_report_price(sale_soup) if sale_soup else 0
-    time.sleep(1)
-    rent_url = f"https://www.idealista.pt/media/relatorios-preco-habitacao/arrendamento/{location_code}/"
-    rent_soup = scrape_report_with_scraperapi(rent_url, api_key)
-    rent_price = get_report_price(rent_soup) if rent_soup else 0
-    return sale_price, rent_price
-
-def scrape_reports_recursive(data, api_key, level=0):
-    """Recursively traverses the data structure, scrapes prices from reports, and updates the dictionary."""
-    global report_scraping_status
-    for name, location_data in data.items():
-        if isinstance(location_data, dict) and 'code' in location_data:
-            if not location_data.get('code'):
-                continue
-
-            progress_message = f"{'  ' * level}Scraping: {location_data.get('name', name)}"
-            logger.info(progress_message)
-            report_scraping_status['progress'] = progress_message
-            report_scraping_status['last_updated'] = datetime.now(timezone.utc)
-
-            sale_price, rent_price = scrape_location_prices_from_report(location_data['code'], api_key)
-
-            location_data['average'] = sale_price
-            location_data['average_rent'] = rent_price
-
-            if 'freguesias' in location_data and isinstance(location_data['freguesias'], dict):
-                scrape_reports_recursive(location_data['freguesias'], api_key, level + 1)
-
-            time.sleep(1.5)
-
-def run_report_scraping_task(api_key: str):
-    """The background task for scraping all market reports."""
-    global report_scraping_status, market_data_structure
-    try:
-        report_scraping_status = {"status": "running", "progress": "Loading initial data...", "error_message": None, "last_updated": datetime.now(timezone.utc)}
-
-        # Load the latest data structure
-        full_structure = load_market_data()
-        data_to_process = full_structure.get("php_array", {})
-
-        # Process each distrito one by one
-        for distrito_name, distrito_data in data_to_process.items():
-            logger.info(f"--- Processing Distrito: {distrito_name} ---")
-            report_scraping_status['progress'] = f"Processing Distrito: {distrito_name}"
-
-            scrape_reports_recursive({distrito_name: distrito_data}, api_key)
-
-            # Save progress after each distrito
-            logger.info(f"--- Finished and saving Distrito: {distrito_name} ---")
-            save_market_data(full_structure)
-
-        report_scraping_status['status'] = 'completed'
-        report_scraping_status['progress'] = 'All districts processed successfully.'
-        logger.info("Market report scraping task completed successfully.")
-
-    except Exception as e:
-        logger.error(f"Market report scraping task failed: {e}", exc_info=True)
-        report_scraping_status['status'] = 'failed'
-        report_scraping_status['error_message'] = str(e)
-    finally:
-        report_scraping_status['last_updated'] = datetime.now(timezone.utc)
-
-
-class ScrapeRequest(BaseModel):
-    api_key: str
-
-@api_router.post("/scrape/market-reports/start")
-async def start_market_report_scraping(scrape_request: ScrapeRequest, background_tasks: BackgroundTasks):
-    """Starts the background task to scrape market prices from idealista reports."""
-    global report_scraping_status
-    if report_scraping_status['status'] == 'running':
-        raise HTTPException(status_code=400, detail="A scraping task is already in progress.")
-
-    background_tasks.add_task(run_report_scraping_task, scrape_request.api_key)
-    return {"message": "Market report scraping process started in the background."}
-
-@api_router.get("/scrape/market-reports/status")
-async def get_market_report_scraping_status():
-    """Returns the status of the current market report scraping task."""
-    return report_scraping_status
 
 # Include the router in the main app
 app.include_router(api_router)

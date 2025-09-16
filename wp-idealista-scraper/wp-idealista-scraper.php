@@ -19,57 +19,19 @@ require_once IS_PLUGIN_PATH . 'includes/ajax-handlers.php';
 
 // Add the admin menu
 add_action('admin_menu', 'is_add_admin_menu');
-add_action('admin_init', 'is_register_settings');
 add_action('admin_enqueue_scripts', 'is_enqueue_scripts');
 
-function is_register_settings() {
-    register_setting(
-        'idealista-scraper-settings-group', // Option group
-        'is_scraper_api_key', // Option name
-        ['sanitize_callback' => 'sanitize_text_field'] // Sanitize
-    );
-}
-
-// Define the backend server URL
-define('IS_BACKEND_URL', 'http://localhost:8000');
-
 function is_enqueue_scripts($hook) {
-    // Only load on our plugin's pages
-    if (strpos($hook, 'idealista-scraper') === false) {
+    if ($hook !== 'idealista-scraper_page_idealista-scraper-market-data') {
         return;
     }
-
-    // Enqueue the existing market-data.js on its page
-    if ($hook === 'idealista-scraper_page_idealista-scraper-market-data') {
-        wp_enqueue_script(
-            'is-market-data',
-            IS_PLUGIN_URL . 'assets/js/market-data.js',
-            ['jquery'],
-            '1.0',
-            true
-        );
-    }
-
-    // Enqueue the new admin scraper script on the market data page
-    if ($hook === 'idealista-scraper_page_idealista-scraper-market-data') {
-        wp_enqueue_script(
-            'is-admin-scraper',
-            IS_PLUGIN_URL . 'assets/js/admin-scraper.js',
-            ['jquery'],
-            '1.0',
-            true
-        );
-
-        // Pass data to the scraper script
-        wp_localize_script(
-            'is-admin-scraper',
-            'is_scraper_data',
-            [
-                'api_key' => get_option('is_scraper_api_key'),
-                'backend_url' => IS_BACKEND_URL
-            ]
-        );
-    }
+    wp_enqueue_script(
+        'is-market-data',
+        IS_PLUGIN_URL . 'assets/js/market-data.js',
+        [],
+        '1.0',
+        true
+    );
 }
 
 function is_add_admin_menu() {
