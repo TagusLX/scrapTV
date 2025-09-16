@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const apiBaseUrl = 'http://localhost:8000/api'; // This should be configurable
+    // Use the localized URL provided by WordPress
+    const apiBaseUrl = is_market_data_config.backend_url + '/api';
 
     const distritoSelect = document.getElementById('is-distrito-select');
     const concelhoSelect = document.getElementById('is-concelho-select');

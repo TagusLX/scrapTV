@@ -48,6 +48,14 @@ function is_enqueue_scripts($hook) {
             '1.0',
             true
         );
+        // Also pass the backend URL to this script
+        wp_localize_script(
+            'is-market-data',
+            'is_market_data_config',
+            [
+                'backend_url' => IS_BACKEND_URL
+            ]
+        );
     }
 
     // Enqueue the new admin scraper script on the market data page
