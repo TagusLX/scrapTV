@@ -1,201 +1,45 @@
+
 <?php
-$market_prices = [
-    "Portugal" => [
-        "name" => "Portugal",
-        "code" => "portugal",
-        "average" => 2951,
-        "average_rent" => 16,
-    ],
-    "Continental" => [
-        "name" => "Continental",
-        "code" => "portugal-continental",
-        "average" => 2951,
-        "average_rent" => 16,
-    ],
-    "Região Autónoma da Madeira" => [
-        "name" => "Região Autónoma da Madeira",
-        "code" => "madeira-ilha",
-        "average" => 3536,
-        "average_rent" => 15,
-    ],
-    "Região Autónoma dos Açores" => [
-        "name" => "Região Autónoma dos Açores",
-        "code" => "acores",
-        "average" => 2162,
-        "average_rent" => 11,
-    ],
-    "Aveiro" => [
-        "name" => "Aveiro",
-        "code" => "aveiro",
-        "average" => 1925,
-        "average_rent" => 10,
-    ],
-    "Beja" => [
-        "name" => "Beja",
-        "code" => "beja",
-        "average" => 1324,
-        "average_rent" => 9,
-    ],
-    "Braga" => [
-        "name" => "Braga",
-        "code" => "braga",
-        "average" => 1820,
-        "average_rent" => 9,
-    ],
-    "Bragança" => [
-        "name" => "Bragança",
-        "code" => "braganca",
-        "average" => 893,
-        "average_rent" => 6,
-    ],
-    "Castelo Branco" => [
-        "name" => "Castelo Branco",
-        "code" => "castelo-branco",
-        "average" => 973,
-        "average_rent" => 8,
-    ],
-    "Coimbra" => [
-        "name" => "Coimbra",
-        "code" => "coimbra",
-        "average" => 1525,
-        "average_rent" => 11,
-    ],
-    "Évora" => [
-        "name" => "Évora",
-        "code" => "evora",
-        "average" => 1511,
-        "average_rent" => 11,
-    ],
-    "Faro" => [
-        "name" => "Faro",
-        "code" => "faro",
-        "average" => 3792,
-        "average_rent" => 16,
-    ],
-    "Guarda" => [
-        "name" => "Guarda",
-        "code" => "guarda",
-        "average" => 785,
-        "average_rent" => 6,
-    ],
-    "Leiria" => [
-        "name" => "Leiria",
-        "code" => "leiria",
-        "average" => 1833,
-        "average_rent" => 10,
-    ],
-    "Lisboa" => [
-        "name" => "Lisboa",
-        "code" => "lisboa",
-        "average" => 4502,
-        "average_rent" => 20,
-    ],
-    "Portalegre" => [
-        "name" => "Portalegre",
-        "code" => "portalegre",
-        "average" => 869,
-        "average_rent" => 7,
-    ],
-    "Porto" => [
-        "name" => "Porto",
-        "code" => "porto",
-        "average" => 2952,
-        "average_rent" => 15,
-    ],
-    "Santarém" => [
-        "name" => "Santarém",
-        "code" => "santarem",
-        "average" => 1400,
-        "average_rent" => 8,
-    ],
-    "Setúbal" => [
-        "name" => "Setúbal",
-        "code" => "setubal",
-        "average" => 3037,
-        "average_rent" => 13,
-    ],
-    "Viana do Castelo" => [
-        "name" => "Viana do Castelo",
-        "code" => "viana-do-castelo",
-        "average" => 1593,
-        "average_rent" => 9,
-    ],
-    "Vila Real" => [
-        "name" => "Vila Real",
-        "code" => "vila-real",
-        "average" => 1059,
-        "average_rent" => 8,
-    ],
-    "Viseu" => [
-        "name" => "Viseu",
-        "code" => "viseu",
-        "average" => 1172,
-        "average_rent" => 7,
-    ],
-    "Ilha da Madeira" => [
-        "name" => "Ilha da Madeira",
-        "code" => "madeira-ilha",
-        "average" => 3536,
-        "average_rent" => 15,
-    ],
-    "Ilha de Porto Santo" => [
-        "name" => "Ilha de Porto Santo",
-        "code" => "porto-santo-ilha",
-        "average" => 2904,
-        "average_rent" => 0,
-    ],
-    "Ilha de Santa Maria" => [
-        "name" => "Ilha de Santa Maria",
-        "code" => "santa-maria-ilha",
-        "average" => 1452,
-        "average_rent" => 0,
-    ],
-    "Ilha de São Miguel" => [
-        "name" => "Ilha de São Miguel",
-        "code" => "sao-miguel-ilha",
-        "average" => 2162,
-        "average_rent" => 11,
-    ],
-    "Ilha Terceira" => [
-        "name" => "Ilha Terceira",
-        "code" => "terceira-ilha",
-        "average" => 1526,
-        "average_rent" => 0,
-    ],
-    "Ilha Graciosa" => [
-        "name" => "Ilha Graciosa",
-        "code" => "graciosa-ilha",
-        "average" => 0,
-        "average_rent" => 0,
-    ],
-    "Ilha de São Jorge" => [
-        "name" => "Ilha de São Jorge",
-        "code" => "sao-jorge-ilha",
-        "average" => 1463,
-        "average_rent" => 0,
-    ],
-    "Ilha do Pico" => [
-        "name" => "Ilha do Pico",
-        "code" => "pico-ilha",
-        "average" => 1480,
-        "average_rent" => 0,
-    ],
-    "Ilha do Faial" => [
-        "name" => "Ilha do Faial",
-        "code" => "faial-ilha",
-        "average" => 1921,
-        "average_rent" => 0,
-    ],
-    "Ilha das Flores" => [
-        "name" => "Ilha das Flores",
-        "code" => "flores-ilha",
-        "average" => 0,
-        "average_rent" => 0,
-    ],
-    "Ilha do Corvo" => [
-        "name" => "Ilha do Corvo",
-        "code" => "corvo-ilha",
-        "average" => 0,
-        "average_rent" => 0,
-    ],
-];
+/**
+ * Market prices data for Portugal
+ * Last update 16-09-2025 (16:30)
+ * @link       https://tagusvalue.com
+ * @since      1.0.0
+ *
+ * @package    Tagus_Value
+ * @subpackage Tagus_Value/data
+ */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Get market data for Portuguese real estate
+ *
+ * @return array Market data by region
+ */
+function tagus_value_get_market_data() {
+    return [
+        'Faro' => [
+            'name' => 'Faro',
+            'average' => 0,
+            'average_rent' => 0,
+            'freguesias' => [
+                'Tavira' => [
+                    'name' => 'Tavira',
+                    'average' => 0,
+                    'average_rent' => 0,
+                    'freguesias' => [
+                        'Conceição e Cabanas de Tavira' => [
+                            'name' => 'Conceição e Cabanas de Tavira',
+                            'average' => 0,
+                            'average_rent' => 0,
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ];
+}
