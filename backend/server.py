@@ -4139,6 +4139,59 @@ async def get_market_report_scraping_status():
     """Returns the status of the current market report scraping task."""
     return report_scraping_status
 
+class ManualScrapeRequest(BaseModel):
+    distrito: str
+    concelho: str
+    freguesia: str
+    manual_url: str
+
+@api_router.post("/scrape/manual-url")
+async def scrape_manual_url(request: ManualScrapeRequest):
+    """Scrapes a single manual URL and updates the price for a specific freguesia."""
+    logger.info(f"Received manual scrape request for {request.distrito}/{request.concelho}/{request.freguesia}")
+
+    # Use the anonymous scraper to fetch the page
+    response = await anonymous_scraper.anonymous_get(request.manual_url)
+    if not response:
+        raise HTTPException(status_code=500, detail="Failed to scrape the provided URL. It might be blocked or require a CAPTCHA.")
+
+    price, error = anonymous_scraper.extract_price_beautiful_soup(response, request.manual_url)
+
+    if error:
+        raise HTTPException(status_code=400, detail=f"Failed to extract price: {error}")
+
+    # Load the data file to update it
+    full_structure = load_market_data()
+    data_ptr = full_structure.get("php_array", {})
+
+    # Navigate to the specific freguesia
+    distrito_data = find_by_code(data_ptr, request.distrito)
+    if not distrito_data:
+        raise HTTPException(status_code=404, detail="Distrito not found in data file.")
+
+    concelho_data = find_by_code(distrito_data.get("freguesias", {}), request.concelho)
+    if not concelho_data:
+        raise HTTPException(status_code=404, detail="Concelho not found in data file.")
+
+    freguesia_data = find_by_code(concelho_data.get("freguesias", {}), request.freguesia)
+    if not freguesia_data:
+        raise HTTPException(status_code=404, detail="Freguesia not found in data file.")
+
+    # Update the data
+    freguesia_data['average'] = price
+    freguesia_data['manual_url'] = request.manual_url
+    freguesia_data['last_manual_update'] = datetime.now(timezone.utc).isoformat()
+
+    # Save the updated data structure
+    save_market_data(full_structure)
+
+    # Reload the in-memory data for consistency
+    global market_data_structure
+    market_data_structure = load_market_data()
+
+    return {"message": f"Successfully updated price to {price} for {request.freguesia}.", "new_price": price}
+
+
 # Include the router in the main app
 app.include_router(api_router)
 

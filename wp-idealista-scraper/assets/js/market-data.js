@@ -132,7 +132,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         formHtml += '</table>';
-        formHtml += '<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="Save Changes"></p>';
+        formHtml += '<h3>Manual Scrape</h3>';
+        formHtml += '<table class="form-table">';
+        formHtml += `
+            <tr>
+                <th scope="row"><label for="is-manual-url">Manual Scrape URL</label></th>
+                <td>
+                    <input type="url" id="is-manual-url" name="manual_url" value="${data.manual_url || ''}" class="regular-text" style="width: 70%;">
+                    <button type="button" id="is-scrape-manual-url" class="button">Scrape & Update Price</button>
+                    <div id="manual-scrape-status" style="margin-top: 5px; font-style: italic;"></div>
+                </td>
+            </tr>
+        `;
+        formHtml += '</table>';
+
+        formHtml += '<p class="submit"><input type="submit" name="submit" id="submit" class="button button-primary" value="Save All Changes"></p>';
         formHtml += '</form>';
 
         formContainer.innerHTML = formHtml;
@@ -142,6 +156,45 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             saveMarketData(this, distrito, concelho, freguesia);
+        });
+
+        const scrapeButton = document.getElementById('is-scrape-manual-url');
+        scrapeButton.addEventListener('click', function() {
+            const manualUrl = document.getElementById('is-manual-url').value;
+            if (!manualUrl) {
+                alert('Please enter a URL to scrape.');
+                return;
+            }
+
+            const statusDiv = document.getElementById('manual-scrape-status');
+            statusDiv.textContent = 'Scraping...';
+            this.disabled = true;
+
+            // This new endpoint will need to be created in the backend
+            fetch(`${apiBaseUrl}/scrape/manual-url`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    distrito: distrito,
+                    concelho: concelho,
+                    freguesia: freguesia,
+                    manual_url: manualUrl
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                statusDiv.textContent = result.message || 'Done.';
+                if (result.new_price !== undefined) {
+                    // Update the price in the form field visually
+                    document.querySelector('[name="average"]').value = result.new_price;
+                }
+                scrapeButton.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error scraping manual URL:', error);
+                statusDiv.textContent = 'An error occurred during scraping.';
+                scrapeButton.disabled = false;
+            });
         });
     }
 
