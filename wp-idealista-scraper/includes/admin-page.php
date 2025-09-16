@@ -8,7 +8,13 @@ function is_render_dashboard_page() {
     ?>
     <div class="wrap">
         <h1>Dashboard</h1>
-        <p>This is the dashboard page. Content to be added.</p>
+        <p>Welcome to the Idealista Scraper dashboard.</p>
+        <p>Statistics about the scraped data will be displayed here once you have run a scraping session.</p>
+
+        <div id="dashboard-stats-container">
+            <!-- Stats will be loaded here via AJAX -->
+            <p>Loading statistics...</p>
+        </div>
     </div>
     <?php
 }
@@ -17,7 +23,12 @@ function is_render_zone_management_page() {
     ?>
     <div class="wrap">
         <h1>Zone Management</h1>
-        <p>This is the zone management page. Content to be added.</p>
+        <p>Select the zones you want to scrape.</p>
+        <?php wp_nonce_field('idealista_scraper_nonce', 'is_nonce'); ?>
+        <div id="is-zone-tree-container"></div>
+        <p class="submit">
+            <button id="is-save-zones-button" class="button button-primary">Save Selected Zones</button>
+        </p>
     </div>
     <?php
 }
@@ -68,7 +79,19 @@ function is_render_settings_page() {
     ?>
     <div class="wrap">
         <h1>Settings</h1>
-        <p>This is the settings page. Content to be added.</p>
+        <form method="post" action="options.php">
+            <?php
+                settings_fields('idealista-scraper-settings-group');
+                do_settings_sections('idealista-scraper-settings-group');
+            ?>
+            <table class="form-table">
+                <tr valign="top">
+                    <th scope="row">API URL</th>
+                    <td><input type="text" name="idealista_scraper_api_url" value="<?php echo esc_attr(get_option('idealista_scraper_api_url')); ?>" class="regular-text" /></td>
+                </tr>
+            </table>
+            <?php submit_button(); ?>
+        </form>
     </div>
     <?php
 }
