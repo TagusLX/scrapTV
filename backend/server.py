@@ -34,23 +34,32 @@ ROOT_DIR = Path(__file__).parent
 DATA_FILE = ROOT_DIR.parent / 'wp-idealista-scraper' / 'includes' / 'data' / 'portugal_administrative_structure.json'
 
 def load_market_data():
-    """Loads the market data structure from the JSON file."""
+    """Loads the market data structure from the WordPress REST API."""
+    wp_api_url = "http://localhost/wp-json/idealista-scraper/v1/structure"
     try:
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            logger.info(f"Loaded {len(data.get('php_array', {}))} districts from JSON file.")
-            return data
-    except (FileNotFoundError, json.JSONDecodeError):
-        logger.error("Failed to load market data JSON file.")
+        logger.info(f"Fetching market data from WordPress API: {wp_api_url}")
+        response = requests.get(wp_api_url, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        logger.info(f"Successfully loaded {len(data.get('php_array', {}))} districts from WordPress API.")
+        return data
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch market data from WordPress API: {e}")
+        return {}
+    except json.JSONDecodeError:
+        logger.error("Failed to parse JSON response from WordPress API.")
         return {}
 
 def save_market_data(data):
-    """Saves the market data structure to the JSON file."""
+    """Saves the market data structure via the WordPress REST API."""
+    wp_api_url = "http://localhost/wp-json/idealista-scraper/v1/structure"
     try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except IOError as e:
-        logger.error(f"Failed to save market data JSON file: {e}")
+        logger.info(f"Saving market data to WordPress API: {wp_api_url}")
+        response = requests.post(wp_api_url, json=data, timeout=30)
+        response.raise_for_status()
+        logger.info("Successfully saved market data via WordPress API.")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to save market data via WordPress API: {e}")
 
 # Configure logging
 logging.basicConfig(
