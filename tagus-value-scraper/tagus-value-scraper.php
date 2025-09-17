@@ -355,8 +355,8 @@ function scrape_idealista_price($distrito, $concelho = '', $freguesia = '', $pro
     @$dom->loadHTML('<?xml encoding="UTF-8">' . $body); // Handle encoding
     $xpath = new DOMXPath($dom);
     
-    // Find <p class="items-average-price">
-    $price_nodes = $xpath->query('//p[@class="items-average-price"]');
+    // Find element containing "eur/m²"
+    $price_nodes = $xpath->query('//*[contains(text(), "eur/m²")]');
     if ($price_nodes->length > 0) {
         $price_text = $price_nodes->item(0)->textContent;
         // Extract numeric value (e.g., "3.349 eur/m²" -> 3.349)
