@@ -324,11 +324,14 @@ function scrape_idealista_price($distrito, $concelho = '', $freguesia = '', $pro
     
     // Construct URL based on level
     if ($freguesia) {
+        // Freguesia URLs are typically in the format /base-type/concelho/freguesia/subtype
         $url = 'https://www.idealista.pt/' . $base_type . '/' . $concelho . '/' . $freguesia . $subtype . '/';
     } elseif ($concelho) {
-        $url = 'https://www.idealista.pt/' . $base_type . '/' . $concelho . $subtype . '/';
+        // Concelho URLs need the -concelho suffix
+        $url = 'https://www.idealista.pt/' . $base_type . '/' . $concelho . '-concelho' . $subtype . '/';
     } else {
-        $url = 'https://www.idealista.pt/' . $base_type . '/' . $distrito . $subtype . '/';
+        // Distrito URLs need the -distrito suffix
+        $url = 'https://www.idealista.pt/' . $base_type . '/' . $distrito . '-distrito' . $subtype . '/';
     }
     
     // Fetch the page using wp_remote_get
@@ -355,8 +358,8 @@ function scrape_idealista_price($distrito, $concelho = '', $freguesia = '', $pro
     @$dom->loadHTML('<?xml encoding="UTF-8">' . $body); // Handle encoding
     $xpath = new DOMXPath($dom);
     
-    // Find element containing "eur/m²"
-    $price_nodes = $xpath->query('//*[contains(text(), "eur/m²")]');
+    // Find <p class="items-average-price">
+    $price_nodes = $xpath->query('//p[@class="items-average-price"]');
     if ($price_nodes->length > 0) {
         $price_text = $price_nodes->item(0)->textContent;
         // Extract numeric value (e.g., "3.349 eur/m²" -> 3.349)
