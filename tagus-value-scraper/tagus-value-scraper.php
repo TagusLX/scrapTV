@@ -291,8 +291,8 @@ function tagus_value_scrape_single_concelho($distrito_slug, $concelho_slug, $con
     $base_url_rent = 'https://www.idealista.pt/arrendar-casas';
 
     // Scrape Concelho level
-    $concelho_url_sale = "$base_url_sale/$concelho_slug-concelho/";
-    $concelho_url_rent = "$base_url_rent/$concelho_slug-concelho/";
+    $concelho_url_sale = "$base_url_sale/$concelho_slug/";
+    $concelho_url_rent = "$base_url_rent/$concelho_slug/";
     $concelho_data['average'] = tagus_value_scrape_url($concelho_url_sale)['price'];
     $concelho_data['average_rent'] = tagus_value_scrape_url($concelho_url_rent)['price'];
     sleep(1);
@@ -300,8 +300,8 @@ function tagus_value_scrape_single_concelho($distrito_slug, $concelho_slug, $con
     // Scrape Freguesias
     if (isset($concelho_data['freguesias']) && is_array($concelho_data['freguesias'])) {
         foreach ($concelho_data['freguesias'] as $freguesia_slug => &$freguesia_data) {
-            $freguesia_url_sale = "$base_url_sale/$concelho_slug-concelho/$freguesia_slug/";
-            $freguesia_url_rent = "$base_url_rent/$concelho_slug-concelho/$freguesia_slug/";
+            $freguesia_url_sale = "$base_url_sale/$concelho_slug/$freguesia_slug/";
+            $freguesia_url_rent = "$base_url_rent/$concelho_slug/$freguesia_slug/";
             $freguesia_data['average'] = tagus_value_scrape_url($freguesia_url_sale)['price'];
             $freguesia_data['average_rent'] = tagus_value_scrape_url($freguesia_url_rent)['price'];
             sleep(1);
@@ -379,8 +379,8 @@ function tagus_value_scrape_single_freguesia($distrito_slug, $concelho_slug, $fr
     $base_url_sale = 'https://www.idealista.pt/comprar-casas';
     $base_url_rent = 'https://www.idealista.pt/arrendar-casas';
     // Corrected URL structure
-    $freguesia_url_sale = "$base_url_sale/$concelho_slug-concelho/$freguesia_slug/";
-    $freguesia_url_rent = "$base_url_rent/$concelho_slug-concelho/$freguesia_slug/";
+    $freguesia_url_sale = "$base_url_sale/$concelho_slug/$freguesia_slug/";
+    $freguesia_url_rent = "$base_url_rent/$concelho_slug/$freguesia_slug/";
 
     $sale_price = tagus_value_scrape_url($freguesia_url_sale)['price'];
     $rent_price = tagus_value_scrape_url($freguesia_url_rent)['price'];
@@ -441,57 +441,82 @@ function tagus_value_scraper_admin_page() {
         
         <hr>
 
-        <h2>Sélecteur de Localisation (pour scraping ciblé)</h2>
-        <form method="post">
-            <input type="hidden" name="tagus_value_action" value="start_targeted_scrape">
-            <?php wp_nonce_field('tagus_value_targeted_scrape_action', 'tagus_value_targeted_nonce'); ?>
+        <h2>Sélecteur de Localisation (pour scraping et filtrage)</h2>
+        <form method="get">
+            <input type="hidden" name="page" value="tagus-value-scraper">
             <table class="form-table">
                 <tr>
                     <th scope="row">Distrito</th>
                     <td>
-                        <select name="distrito" id="distrito" required>
-                            <option value="">Choisir un Distrito</option>
+                        <select name="filter_distrito" id="distrito">
+                            <option value="">Tous les Distritos</option>
                             <?php foreach ($data as $distrito_slug => $distrito_info): ?>
-                                <option value="<?php echo esc_attr($distrito_slug); ?>"><?php echo esc_html($distrito_info['name']); ?></option>
+                                <option value="<?php echo esc_attr($distrito_slug); ?>" <?php selected($_GET['filter_distrito'] ?? '', $distrito_slug); ?>>
+                                    <?php echo esc_html($distrito_info['name']); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
-                        <span id="scrape-distrito-wrapper" style="display:none;">
-                            <?php submit_button('Scraper ce Distrito', 'secondary', 'scrape_distrito_button', false); ?>
-                        </span>
                     </td>
                 </tr>
                 <tr>
                     <th scope="row">Concelho</th>
                     <td>
-                        <select name="concelho" id="concelho" disabled>
-                            <option value="">Sélectionnez d'abord un Distrito</option>
+                        <select name="filter_concelho" id="concelho" disabled>
+                            <option value="">Tous les Concelhos</option>
                         </select>
-                        <span id="scrape-concelho-wrapper" style="display:none;">
-                            <?php submit_button('Scraper ce Concelho', 'secondary', 'scrape_concelho_button', false); ?>
-                        </span>
                     </td>
                 </tr>
                 <tr>
                     <th scope="row">Freguesia</th>
                     <td>
-                        <select name="freguesia" id="freguesia" disabled>
-                            <option value="">Sélectionnez d'abord un Concelho</option>
+                        <select name="filter_freguesia" id="freguesia" disabled>
+                            <option value="">Toutes les Freguesias</option>
                         </select>
-                        <span id="scrape-freguesia-wrapper" style="display:none;">
-                            <?php submit_button('Scraper cette Freguesia (Test)', 'primary', 'scrape_freguesia_button', false); ?>
-                        </span>
                     </td>
                 </tr>
             </table>
+            <?php submit_button('Filtrer', 'primary', 'filter_submit', false); ?>
+        </form>
+        <hr>
+        <form method="post">
+            <input type="hidden" name="tagus_value_action" value="start_targeted_scrape">
+            <?php wp_nonce_field('tagus_value_targeted_scrape_action', 'tagus_value_targeted_nonce'); ?>
+            <input type="hidden" name="distrito" id="hidden_distrito">
+            <input type="hidden" name="concelho" id="hidden_concelho">
+            <input type="hidden" name="freguesia" id="hidden_freguesia">
+            <span id="scrape-distrito-wrapper" style="display:none;"><?php submit_button('Scraper ce Distrito', 'secondary', 'scrape_distrito_button', false); ?></span>
+            <span id="scrape-concelho-wrapper" style="display:none; margin-left:10px;"><?php submit_button('Scraper ce Concelho', 'secondary', 'scrape_concelho_button', false); ?></span>
+            <span id="scrape-freguesia-wrapper" style="display:none; margin-left:10px;"><?php submit_button('Scraper cette Freguesia (Test)', 'primary', 'scrape_freguesia_button', false); ?></span>
         </form>
 
         <hr>
         <h2>Données du Marché Actuel</h2>
         <?php
-        $market_data = function_exists('tagus_value_get_market_data') ? tagus_value_get_market_data() : [];
-        if (empty($market_data)):
+        $location_skeleton = tagus_value_process_locations_file();
+        $saved_prices = function_exists('tagus_value_get_market_data') ? tagus_value_get_market_data() : [];
+        $market_data_full = array_replace_recursive($location_skeleton, $saved_prices);
+
+        $filter_distrito = $_GET['filter_distrito'] ?? '';
+        $filter_concelho = $_GET['filter_concelho'] ?? '';
+
+        $market_data_display = $market_data_full;
+
+        if ($filter_distrito && isset($market_data_full[$filter_distrito])) {
+            $market_data_display = [$filter_distrito => $market_data_full[$filter_distrito]];
+            if ($filter_concelho && isset($market_data_display[$filter_distrito][$filter_concelho])) {
+                $original_distrito_data = $market_data_display[$filter_distrito];
+                $market_data_display[$filter_distrito] = [
+                    'name' => $original_distrito_data['name'],
+                    'average' => $original_distrito_data['average'],
+                    'average_rent' => $original_distrito_data['average_rent'],
+                    $filter_concelho => $original_distrito_data[$filter_concelho]
+                ];
+            }
+        }
+
+        if (empty($market_data_display)):
         ?>
-            <p>Aucune donnée de marché n'a encore été générée. Lancez le scraping pour commencer.</p>
+            <p>Aucune donnée de marché n'a encore été générée ou le filtre n'a retourné aucun résultat. Lancez le scraping pour commencer.</p>
         <?php else: ?>
             <form method="post">
                 <input type="hidden" name="tagus_value_action" value="save_manual_prices">
@@ -515,7 +540,7 @@ function tagus_value_scraper_admin_page() {
                     <tbody>
                         <?php
                         $base_url = 'https://www.idealista.pt/comprar-casas';
-                        foreach ($market_data as $distrito_slug => $distrito_data):
+                        foreach ($market_data_display as $distrito_slug => $distrito_data):
                             $distrito_url = "$base_url/$distrito_slug-distrito/";
                         ?>
                             <tr class="distrito-row">
@@ -527,7 +552,7 @@ function tagus_value_scraper_admin_page() {
                             <?php foreach ($distrito_data as $concelho_slug => $concelho_data): ?>
                                 <?php
                                 if (!is_array($concelho_data) || !isset($concelho_data['freguesias'])) continue;
-                                $concelho_url = "$base_url/$concelho_slug-concelho/";
+                                $concelho_url = "$base_url/$concelho_slug/";
                                 ?>
                                 <tr class="concelho-row">
                                     <td><?php echo esc_html($concelho_data['name']); ?></td>
@@ -536,7 +561,7 @@ function tagus_value_scraper_admin_page() {
                                     <td><a href="<?php echo esc_url($concelho_url); ?>" target="_blank">Voir</a></td>
                                 </tr>
                                 <?php foreach ($concelho_data['freguesias'] as $freguesia_slug => $freguesia_data):
-                                    $freguesia_url = "$base_url/$concelho_slug-concelho/$freguesia_slug/";
+                                    $freguesia_url = "$base_url/$concelho_slug/$freguesia_slug/";
                                 ?>
                                     <tr class="freguesia-row">
                                         <td><?php echo esc_html($freguesia_data['name']); ?></td>
@@ -558,62 +583,83 @@ function tagus_value_scraper_admin_page() {
     <script>
     jQuery(document).ready(function($) {
         var data = <?php echo json_encode($data); ?>;
-        
-        // Populate Concelho dropdown when Distrito changes
-        $('#distrito').change(function() {
-            var distrito = $(this).val();
-            var concelhoSelect = $('#concelho');
-            var freguesiaSelect = $('#freguesia');
+        var selectedDistrito = '<?php echo esc_js($_GET['filter_distrito'] ?? ''); ?>';
+        var selectedConcelho = '<?php echo esc_js($_GET['filter_concelho'] ?? ''); ?>';
+        var selectedFreguesia = '<?php echo esc_js($_GET['filter_freguesia'] ?? ''); ?>';
 
-            concelhoSelect.html('<option value="">Choisir un Concelho</option>').prop('disabled', true);
-            freguesiaSelect.html('<option value="">Choisir une Freguesia</option>').prop('disabled', true);
-            $('#scrape-distrito-wrapper').hide();
-            $('#scrape-concelho-wrapper').hide();
-            $('#scrape-freguesia-wrapper').hide();
-            
-            if (distrito) {
-                $('#scrape-distrito-wrapper').show();
+        function populateConcelhos(distrito, preselect) {
+            var concelhoSelect = $('#concelho');
+            concelhoSelect.html('<option value="">Tous les Concelhos</option>').prop('disabled', true);
+            if (distrito && data[distrito]) {
                 var concelhos = Object.keys(data[distrito]).filter(key => key !== 'name' && key !== 'average' && key !== 'average_rent');
                 concelhos.forEach(function(concelhoKey) {
-                    var option = '<option value="' + concelhoKey + '">' + data[distrito][concelhoKey].name + '</option>';
+                    var option = new Option(data[distrito][concelhoKey].name, concelhoKey);
                     concelhoSelect.append(option);
                 });
                 concelhoSelect.prop('disabled', false);
+                if (preselect) {
+                    concelhoSelect.val(preselect);
+                }
             }
+        }
+
+        function populateFreguesias(distrito, concelho, preselect) {
+            var freguesiaSelect = $('#freguesia');
+            freguesiaSelect.html('<option value="">Toutes les Freguesias</option>').prop('disabled', true);
+            if (distrito && concelho && data[distrito] && data[distrito][concelho] && data[distrito][concelho].freguesias) {
+                var freguesias = data[distrito][concelho].freguesias;
+                Object.keys(freguesias).forEach(function(freguesiaKey) {
+                    var option = new Option(freguesias[freguesiaKey].name, freguesiaKey);
+                    freguesiaSelect.append(option);
+                });
+                freguesiaSelect.prop('disabled', false);
+                if (preselect) {
+                    freguesiaSelect.val(preselect);
+                }
+            }
+        }
+
+        $('#distrito').change(function() {
+            var distrito = $(this).val();
+            populateConcelhos(distrito, '');
+            populateFreguesias('', '', ''); // Clear freguesias
+            $('#hidden_distrito').val(distrito);
+            $('#hidden_concelho').val('');
+            $('#hidden_freguesia').val('');
+            $('#scrape-distrito-wrapper').toggle(!!distrito);
+            $('#scrape-concelho-wrapper').hide();
+            $('#scrape-freguesia-wrapper').hide();
         });
-        
-        // Populate Freguesia dropdown when Concelho changes
+
         $('#concelho').change(function() {
             var distrito = $('#distrito').val();
             var concelho = $(this).val();
-            var freguesiaSelect = $('#freguesia');
-
-            freguesiaSelect.html('<option value="">Choisir une Freguesia</option>').prop('disabled', true);
-            $('#scrape-concelho-wrapper').hide();
+            populateFreguesias(distrito, concelho, '');
+            $('#hidden_concelho').val(concelho);
+            $('#hidden_freguesia').val('');
+            $('#scrape-concelho-wrapper').toggle(!!concelho);
             $('#scrape-freguesia-wrapper').hide();
-            
-            if (concelho) {
-                 $('#scrape-concelho-wrapper').show();
-                if (distrito && data[distrito][concelho] && data[distrito][concelho].freguesias) {
-                    var freguesias = data[distrito][concelho].freguesias;
-                    Object.keys(freguesias).forEach(function(freguesiaKey) {
-                        var option = '<option value="' + freguesiaKey + '">' + freguesias[freguesiaKey].name + '</option>';
-                        freguesiaSelect.append(option);
-                    });
-                    freguesiaSelect.prop('disabled', false);
-                }
-            }
         });
 
-        // Show Freguesia scrape button
         $('#freguesia').change(function() {
             var freguesia = $(this).val();
-            if (freguesia) {
-                $('#scrape-freguesia-wrapper').show();
-            } else {
-                $('#scrape-freguesia-wrapper').hide();
-            }
+            $('#hidden_freguesia').val(freguesia);
+            $('#scrape-freguesia-wrapper').toggle(!!freguesia);
         });
+
+        // Pre-populate on page load if filters are set
+        if (selectedDistrito) {
+            $('#distrito').val(selectedDistrito);
+            populateConcelhos(selectedDistrito, selectedConcelho);
+            if (selectedConcelho) {
+                populateFreguesias(selectedDistrito, selectedConcelho, selectedFreguesia);
+            }
+        }
+
+        // Trigger change to set initial button visibility
+        $('#distrito').trigger('change');
+        $('#concelho').trigger('change');
+        $('#freguesia').trigger('change');
     });
     </script>
     <?php
