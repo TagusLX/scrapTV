@@ -317,12 +317,9 @@ function tagus_value_scrape_concelho_hook_func($args) {
 function tagus_value_scrape_single_concelho($distrito_slug, $concelho_slug, $concelho_data) {
     // Scrape Concelho level
     $concelho_url_sale = tagus_value_get_idealista_url('comprar-casas', ['concelho' => $concelho_slug]);
-    $concelho_url_sale_fallback = str_replace("/$concelho_slug/", "/$concelho_slug-concelho/", $concelho_url_sale);
     $concelho_url_rent = tagus_value_get_idealista_url('arrendar-casas', ['concelho' => $concelho_slug]);
-    $concelho_url_rent_fallback = str_replace("/$concelho_slug/", "/$concelho_slug-concelho/", $concelho_url_rent);
-
-    $concelho_data['average'] = tagus_value_scrape_url($concelho_url_sale, $concelho_url_sale_fallback)['price'];
-    $concelho_data['average_rent'] = tagus_value_scrape_url($concelho_url_rent, $concelho_url_rent_fallback)['price'];
+    $concelho_data['average'] = tagus_value_scrape_url($concelho_url_sale)['price'];
+    $concelho_data['average_rent'] = tagus_value_scrape_url($concelho_url_rent)['price'];
     sleep(1);
 
     // Scrape Freguesias
@@ -330,12 +327,9 @@ function tagus_value_scrape_single_concelho($distrito_slug, $concelho_slug, $con
         foreach ($concelho_data['freguesias'] as $freguesia_slug => &$freguesia_data) {
             $slugs = ['concelho' => $concelho_slug, 'freguesia' => $freguesia_slug];
             $freguesia_url_sale = tagus_value_get_idealista_url('comprar-casas', $slugs);
-            $freguesia_url_sale_fallback = str_replace("/$concelho_slug/", "/$concelho_slug-concelho/", $freguesia_url_sale);
             $freguesia_url_rent = tagus_value_get_idealista_url('arrendar-casas', $slugs);
-            $freguesia_url_rent_fallback = str_replace("/$concelho_slug/", "/$concelho_slug-concelho/", $freguesia_url_rent);
-
-            $freguesia_data['average'] = tagus_value_scrape_url($freguesia_url_sale, $freguesia_url_sale_fallback)['price'];
-            $freguesia_data['average_rent'] = tagus_value_scrape_url($freguesia_url_rent, $freguesia_url_rent_fallback)['price'];
+            $freguesia_data['average'] = tagus_value_scrape_url($freguesia_url_sale)['price'];
+            $freguesia_data['average_rent'] = tagus_value_scrape_url($freguesia_url_rent)['price'];
             sleep(1);
         }
         unset($freguesia_data);
@@ -410,12 +404,10 @@ function tagus_value_scrape_single_freguesia($distrito_slug, $concelho_slug, $fr
 
     $slugs = ['concelho' => $concelho_slug, 'freguesia' => $freguesia_slug];
     $freguesia_url_sale = tagus_value_get_idealista_url('comprar-casas', $slugs);
-    $freguesia_url_sale_fallback = str_replace("/$concelho_slug/", "/$concelho_slug-concelho/", $freguesia_url_sale);
     $freguesia_url_rent = tagus_value_get_idealista_url('arrendar-casas', $slugs);
-    $freguesia_url_rent_fallback = str_replace("/$concelho_slug/", "/$concelho_slug-concelho/", $freguesia_url_rent);
 
-    $sale_price = tagus_value_scrape_url($freguesia_url_sale, $freguesia_url_sale_fallback)['price'];
-    $rent_price = tagus_value_scrape_url($freguesia_url_rent, $freguesia_url_rent_fallback)['price'];
+    $sale_price = tagus_value_scrape_url($freguesia_url_sale)['price'];
+    $rent_price = tagus_value_scrape_url($freguesia_url_rent)['price'];
 
     $market_data[$distrito_slug][$concelho_slug]['freguesias'][$freguesia_slug]['average'] = $sale_price;
     $market_data[$distrito_slug][$concelho_slug]['freguesias'][$freguesia_slug]['average_rent'] = $rent_price;
@@ -717,51 +709,45 @@ function get_property_type_label($property_type) {
  * @param string $url The URL to scrape.
  * @return array A result array with 'price', 'error', and 'url'.
  */
-function tagus_value_scrape_url($url, $fallback_url = '') {
-    $urls_to_try = array_filter([$url, $fallback_url]);
+function tagus_value_scrape_url($url) {
+    error_log("Tagus Value Scraper: Attempting to scrape URL: " . $url);
+    $response = wp_remote_get($url, array(
+        'timeout' => 30,
+        'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    ));
 
-    foreach ($urls_to_try as $current_url) {
-        error_log("Tagus Value Scraper: Attempting to scrape URL: " . $current_url);
-        $response = wp_remote_get($current_url, array(
-            'timeout' => 30,
-            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        ));
+    if (is_wp_error($response)) {
+        return array('price' => false, 'error' => 'Erreur HTTP: ' . $response->get_error_message(), 'url' => $url);
+    }
 
-        if (is_wp_error($response)) {
-            continue; // Try next URL if there's an HTTP error
-        }
+    $body = wp_remote_retrieve_body($response);
+    if (empty($body)) {
+        return array('price' => false, 'error' => 'Réponse vide.', 'url' => $url);
+    }
 
-        $body = wp_remote_retrieve_body($response);
-        if (empty($body)) {
-            continue; // Try next URL if body is empty
-        }
+    $dom = new DOMDocument();
+    @$dom->loadHTML('<?xml encoding="UTF-8">' . $body);
+    $xpath = new DOMXPath($dom);
 
-        $dom = new DOMDocument();
-        @$dom->loadHTML('<?xml encoding="UTF-8">' . $body);
-        $xpath = new DOMXPath($dom);
+    $selectors = array(
+        '//p[@class="items-average-price"]',
+        '//*[contains(text(), "eur/m²")]'
+    );
 
-        $selectors = array(
-            '//p[@class="items-average-price"]',
-            '//*[contains(text(), "eur/m²")]'
-        );
-
-        foreach ($selectors as $selector) {
-            $price_nodes = $xpath->query($selector);
-            if ($price_nodes->length > 0) {
-                $price_text = $price_nodes->item(0)->textContent;
-                if (preg_match('/([\d,.]+)/', $price_text, $matches)) {
-                    $price_string = $matches[1];
-                    $price_string_no_thousands = str_replace('.', '', $price_string);
-                    $price_string_for_float = str_replace(',', '.', $price_string_no_thousands);
-                    $price = floatval($price_string_for_float);
-                    // Success, return the price and the URL that worked
-                    return array('price' => $price, 'error' => '', 'url' => $current_url);
-                }
+    foreach ($selectors as $selector) {
+        $price_nodes = $xpath->query($selector);
+        if ($price_nodes->length > 0) {
+            $price_text = $price_nodes->item(0)->textContent;
+            if (preg_match('/([\d,.]+)/', $price_text, $matches)) {
+                $price_string = $matches[1];
+                $price_string_no_thousands = str_replace('.', '', $price_string);
+                $price_string_for_float = str_replace(',', '.', $price_string_no_thousands);
+                $price = floatval($price_string_for_float);
+                return array('price' => $price, 'error' => '', 'url' => $url);
             }
         }
     }
 
-    // If all URLs and selectors failed
     return array('price' => false, 'error' => 'Aucun prix moyen trouvé.', 'url' => $url);
 }
 
