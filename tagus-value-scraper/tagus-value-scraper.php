@@ -14,8 +14,286 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Include the market data structure
-require_once plugin_dir_path(__FILE__) . 'market-prices.php';
+// Include the market data structure if it exists
+if (file_exists(plugin_dir_path(__FILE__) . 'market-data.php')) {
+    require_once plugin_dir_path(__FILE__) . 'market-data.php';
+}
+
+/**
+ * Generate a URL-friendly slug from a string.
+ *
+ * @param string $text The input string.
+ * @return string The sanitized slug.
+ */
+function tagus_value_generate_slug($text) {
+    // Transliterate special characters to ASCII
+    $text = iconv('UTF-8', 'ASCII//TRANSLIT', $text);
+    // Convert to lowercase
+    $text = strtolower($text);
+    // Replace characters that are not letters, numbers, or hyphens with a hyphen
+    $text = preg_replace('/[^a-z0-9\-]+/', '-', $text);
+    // Replace multiple hyphens with a single one
+    $text = preg_replace('/-+/', '-', $text);
+    // Trim hyphens from the beginning and end
+    $text = trim($text, '-');
+
+    if (empty($text)) {
+        return 'n-a';
+    }
+
+    return $text;
+}
+
+/**
+ * Process the locations.tsv file and build a hierarchical data array.
+ *
+ * @return array The market data structure skeleton.
+ */
+function tagus_value_process_locations_file() {
+    $data = [];
+    $file_path = plugin_dir_path(__FILE__) . 'locations.tsv';
+
+    if (!file_exists($file_path)) {
+        error_log('Tagus Value Scraper: locations.tsv file not found.');
+        return $data;
+    }
+
+    if (($handle = fopen($file_path, 'r')) !== FALSE) {
+        fgetcsv($handle, 0, "\t"); // Skip header row
+
+        while (($row = fgetcsv($handle, 0, "\t")) !== FALSE) {
+            if (count($row) < 3) {
+                continue;
+            }
+
+            $distrito_name = trim($row[0]);
+            $concelho_name = trim($row[1]);
+            $freguesia_raw_name = trim($row[2]);
+
+            // Clean freguesia name as per user request
+            $freguesia_name = $freguesia_raw_name;
+            $prefix_to_remove = 'União das freguesias de ';
+            if (strpos($freguesia_raw_name, $prefix_to_remove) === 0) {
+                $freguesia_name = substr($freguesia_raw_name, strlen($prefix_to_remove));
+            }
+
+            // Generate slugs for array keys
+            $distrito_slug = tagus_value_generate_slug($distrito_name);
+            $concelho_slug = tagus_value_generate_slug($concelho_name);
+            $freguesia_slug = tagus_value_generate_slug($freguesia_name);
+
+            // Build the hierarchical array structure
+            if (!isset($data[$distrito_slug])) {
+                $data[$distrito_slug] = ['name' => $distrito_name];
+            }
+            if (!isset($data[$distrito_slug][$concelho_slug])) {
+                $data[$distrito_slug][$concelho_slug] = ['name' => $concelho_name, 'freguesias' => []];
+            }
+            $data[$distrito_slug][$concelho_slug]['freguesias'][$freguesia_slug] = ['name' => $freguesia_name];
+        }
+        fclose($handle);
+    }
+
+    return $data;
+}
+
+
+/**
+ * Sanitizes the submitted array of prices.
+ *
+ * @param array $array The input array.
+ * @return array The sanitized array.
+ */
+function tagus_value_sanitize_prices_array($array) {
+    foreach ($array as $key => &$value) {
+        if (is_array($value)) {
+            $value = tagus_value_sanitize_prices_array($value);
+        } else {
+            if ($value === '') {
+                $value = null;
+            } else {
+                $sanitized_value = preg_replace('/[^0-9,.]/', '', $value);
+                $sanitized_value = str_replace(',', '.', $sanitized_value);
+                $value = is_numeric($sanitized_value) ? floatval($sanitized_value) : null;
+            }
+        }
+    }
+    return $array;
+}
+
+// Handle admin form submissions
+add_action('admin_init', 'tagus_value_handle_admin_actions');
+function tagus_value_handle_admin_actions() {
+    // Handle starting a new scrape
+    if (isset($_POST['start_scrape_submit'])) {
+        check_admin_referer('tagus_value_start_scrape_action', 'tagus_value_nonce');
+
+        if (get_option('tagus_value_scrape_status') === 'running') {
+            return;
+        }
+
+        update_option('tagus_value_scrape_status', 'running');
+        $distritos = array_keys(tagus_value_process_locations_file());
+
+        wp_clear_scheduled_hook('tagus_value_batch_scrape_hook');
+        wp_schedule_single_event(time(), 'tagus_value_batch_scrape_hook', array('distritos' => $distritos));
+
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-success is-dismissible"><p>Le processus de scraping complet a été lancé. Cela peut prendre plusieurs heures.</p></div>';
+        });
+    }
+
+    // Handle saving manual prices
+    if (isset($_POST['tagus_value_action']) && $_POST['tagus_value_action'] === 'save_manual_prices') {
+        check_admin_referer('tagus_value_save_prices_action', 'tagus_value_prices_nonce');
+
+        $submitted_prices = isset($_POST['prices']) ? $_POST['prices'] : [];
+        $sanitized_prices = tagus_value_sanitize_prices_array($submitted_prices);
+
+        $market_data_path = plugin_dir_path(__FILE__) . 'market-data.json';
+        $existing_data = file_exists($market_data_path) ? json_decode(file_get_contents($market_data_path), true) : [];
+        $existing_data = is_array($existing_data) ? $existing_data : [];
+
+        // Merge the sanitized data into the existing data
+        $updated_data = array_replace_recursive($existing_data, $sanitized_prices);
+
+        // Save the data back to JSON and regenerate the PHP file
+        file_put_contents($market_data_path, json_encode($updated_data, JSON_PRETTY_PRINT));
+        tagus_value_generate_php_data_file();
+
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-success is-dismissible"><p>Les prix manuels ont été enregistrés avec succès.</p></div>';
+        });
+    }
+}
+
+add_action('tagus_value_batch_scrape_hook', 'tagus_value_batch_scrape_hook_func', 10, 1);
+/**
+ * The main function for the WP-Cron batch scraping process.
+ */
+function tagus_value_batch_scrape_hook_func($args) {
+    $distritos = isset($args['distritos']) ? $args['distritos'] : [];
+
+    if (empty($distritos)) {
+        update_option('tagus_value_scrape_status', 'idle'); // Set to idle, not complete
+        tagus_value_generate_php_data_file();
+        error_log('Tagus Value Scraper: Full scrape completed and market-data.php generated.');
+        return;
+    }
+
+    $distrito_slug_to_process = array_shift($distritos);
+    $all_locations = tagus_value_process_locations_file();
+
+    if (isset($all_locations[$distrito_slug_to_process])) {
+        $distrito_data = $all_locations[$distrito_slug_to_process];
+        $scraped_data = tagus_value_scrape_single_distrito($distrito_slug_to_process, $distrito_data);
+
+        $market_data_path = plugin_dir_path(__FILE__) . 'market-data.json';
+        $existing_data = file_exists($market_data_path) ? json_decode(file_get_contents($market_data_path), true) : [];
+        $existing_data = is_array($existing_data) ? $existing_data : [];
+
+        $existing_data[$distrito_slug_to_process] = $scraped_data;
+
+        file_put_contents($market_data_path, json_encode($existing_data, JSON_PRETTY_PRINT));
+        error_log("Tagus Value Scraper: Finished scraping and saved data for $distrito_slug_to_process.");
+    } else {
+        error_log("Tagus Value Scraper: Distrito slug '$distrito_slug_to_process' not found.");
+    }
+
+    if (!empty($distritos)) {
+        wp_schedule_single_event(time() + 5, 'tagus_value_batch_scrape_hook', array('distritos' => $distritos));
+    } else {
+        update_option('tagus_value_scrape_status', 'idle'); // Set to idle, not complete
+        tagus_value_generate_php_data_file();
+        error_log('Tagus Value Scraper: Full scrape process finished and market-data.php generated.');
+    }
+}
+
+/**
+ * Scrapes all data for a single distrito.
+ *
+ * @param string $distrito_slug The slug of the distrito to scrape.
+ * @param array $distrito_data The skeleton data for the distrito.
+ * @return array The populated data for the distrito.
+ */
+function tagus_value_scrape_single_distrito($distrito_slug, $distrito_data) {
+    $base_url_sale = 'https://www.idealista.pt/comprar-casas';
+    $base_url_rent = 'https://www.idealista.pt/arrendar-casas';
+
+    // Scrape Distrito level
+    $distrito_data['average'] = tagus_value_scrape_url("$base_url_sale/$distrito_slug-distrito/")['price'];
+    $distrito_data['average_rent'] = tagus_value_scrape_url("$base_url_rent/$distrito_slug-distrito/")['price'];
+    sleep(1);
+
+    // Iterate through concelhos
+    foreach ($distrito_data as $concelho_slug => &$concelho_data) {
+        if (!is_array($concelho_data) || !isset($concelho_data['freguesias'])) continue;
+
+        $concelho_data['average'] = tagus_value_scrape_url("$base_url_sale/$concelho_slug-concelho/")['price'];
+        $concelho_data['average_rent'] = tagus_value_scrape_url("$base_url_rent/$concelho_slug-concelho/")['price'];
+        sleep(1);
+
+        foreach ($concelho_data['freguesias'] as $freguesia_slug => &$freguesia_data) {
+            $freguesia_data['average'] = tagus_value_scrape_url("$base_url_sale/$concelho_slug/$freguesia_slug/")['price'];
+            $freguesia_data['average_rent'] = tagus_value_scrape_url("$base_url_rent/$concelho_slug/$freguesia_slug/")['price'];
+            sleep(1);
+        }
+        unset($freguesia_data);
+    }
+    unset($concelho_data);
+
+    return $distrito_data;
+}
+
+/**
+ * Generates the final market-data.php file from the JSON data store.
+ */
+function tagus_value_generate_php_data_file() {
+    $json_path = plugin_dir_path(__FILE__) . 'market-data.json';
+    if (!file_exists($json_path)) {
+        error_log('Tagus Value Scraper: Cannot generate PHP data file, market-data.json not found.');
+        return;
+    }
+
+    $data = json_decode(file_get_contents($json_path), true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log('Tagus Value Scraper: Error decoding market-data.json: ' . json_last_error_msg());
+        return;
+    }
+
+    $array_export = var_export($data, true);
+    $timestamp = current_time('d-m-Y (H:i)');
+
+    $file_content = <<<EOD
+<?php
+/**
+ * Market prices data for Portugal
+ * Last update {$timestamp}
+ * @link       https://tagusvalue.com
+ * @since      1.0.0
+ *
+ * @package    Tagus_Value
+ * @subpackage Tagus_Value/data
+ */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Get market data for Portuguese real estate
+ *
+ * @return array Market data by region
+ */
+function tagus_value_get_market_data() {
+    return {$array_export};
+}
+EOD;
+
+    $php_file_path = plugin_dir_path(__FILE__) . 'market-data.php';
+    file_put_contents($php_file_path, $file_content);
+}
 
 // Admin menu
 add_action('admin_menu', 'tagus_value_scraper_menu');
@@ -37,127 +315,119 @@ function tagus_value_scraper_admin_page() {
         wp_die('Unauthorized access');
     }
 
-    $data = tagus_value_get_market_data();
-    $distritos = array_keys($data);
-    
-    // Handle form submission
-    $results = [];
-    if (isset($_POST['scrape_distrito']) && check_admin_referer('scrape_distrito_nonce', 'scrape_nonce')) {
-        $distrito = sanitize_text_field($_POST['distrito']);
-        $property_type = sanitize_text_field($_POST['property_type']);
-        $result = scrape_idealista_price($distrito, '', '', $property_type);
-        $result['level'] = 'Distrito';
-        $result['location'] = ucfirst(str_replace('_', ' ', $distrito));
-        $result['property_type'] = get_property_type_label($property_type);
-        $results[] = $result;
-    } elseif (isset($_POST['scrape_concelho']) && check_admin_referer('scrape_concelho_nonce', 'scrape_nonce')) {
-        $distrito = sanitize_text_field($_POST['distrito']);
-        $concelho = sanitize_text_field($_POST['concelho']);
-        $property_type = sanitize_text_field($_POST['property_type']);
-        $result = scrape_idealista_price($distrito, $concelho, '', $property_type);
-        $result['level'] = 'Concelho';
-        $result['location'] = $data[$distrito][$concelho]['name'];
-        $result['property_type'] = get_property_type_label($property_type);
-        $results[] = $result;
-    } elseif (isset($_POST['scrape_price']) && check_admin_referer('scrape_price_nonce', 'scrape_nonce')) {
-        $distrito = sanitize_text_field($_POST['distrito']);
-        $concelho = sanitize_text_field($_POST['concelho']);
-        $freguesia = sanitize_text_field($_POST['freguesia']);
-        $property_type = sanitize_text_field($_POST['property_type']);
-        $result = scrape_idealista_price($distrito, $concelho, $freguesia, $property_type);
-        $result['level'] = 'Freguesia';
-        $result['location'] = $data[$distrito][$concelho]['name'] . ', ' . $data[$distrito][$concelho]['freguesias'][$freguesia]['name'];
-        $result['property_type'] = get_property_type_label($property_type);
-        $results[] = $result;
-    }
+    // Get current scraping status
+    $scrape_status = get_option('tagus_value_scrape_status', 'idle');
 
+    // Use the new function to get the full list of locations
+    $data = tagus_value_process_locations_file();
     ?>
     <div class="wrap">
         <h1>Tagus Value Price Scraper</h1>
-        <p>Sélectionnez le Distrito, Concelho, Freguesia et type de bien pour scraper le prix moyen au m² depuis Idealista. Les résultats s'affichent dans le tableau ci-dessous.</p>
+
+        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; background: #fff;">
+            <h2>Contrôle du Scraping</h2>
+            <p><strong>Statut actuel:</strong> <?php echo esc_html(ucfirst($scrape_status)); ?></p>
+            <form method="post">
+                <?php wp_nonce_field('tagus_value_start_scrape_action', 'tagus_value_nonce'); ?>
+                <input type="hidden" name="tagus_value_action" value="start_full_scrape">
+                <?php
+                $disabled_attr = ($scrape_status === 'running') ? 'disabled="disabled"' : '';
+                submit_button('Lancer le Scraping Complet', 'primary', 'start_scrape_submit', true, $disabled_attr);
+                ?>
+            </form>
+            <?php if ($scrape_status === 'running'): ?>
+                <p><i>Le scraping est en cours. Cela peut prendre plusieurs heures. Les données seront mises à jour progressivement.</i></p>
+            <?php endif; ?>
+        </div>
         
-        <form method="post" id="scraper-form">
-            <table class="form-table">
-                <tr>
-                    <th scope="row">Type de Bien</th>
-                    <td>
-                        <select name="property_type" id="property_type" required>
-                            <option value="comprar-casas/com-apartamentos">Vente (Appartements)</option>
-                            <option value="comprar-casas/com-moradias">Vente (Maisons)</option>
-                            <option value="arrendar-casas/com-apartamentos">Location (Appartements)</option>
-                            <option value="arrendar-casas/com-moradias">Location (Maisons)</option>
-                            <option value="comprar-terrenos/com-terreno-urbano">Terrain Constructible</option>
-                            <option value="comprar-terrenos/com-terreno-nao-urbanizavel">Terrain Non-Constructible</option>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">Distrito</th>
-                    <td>
-                        <select name="distrito" id="distrito" required>
-                            <option value="">Choisir un Distrito</option>
-                            <?php foreach ($distritos as $distrito_key): ?>
-                                <option value="<?php echo esc_attr($distrito_key); ?>"><?php echo esc_html(ucfirst(str_replace('_', ' ', $distrito_key))); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <?php wp_nonce_field('scrape_distrito_nonce', 'scrape_nonce'); ?>
-                        <?php submit_button('Scraper au niveau Distrito', 'secondary', 'scrape_distrito'); ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">Concelho</th>
-                    <td>
-                        <select name="concelho" id="concelho" disabled>
-                            <option value="">Sélectionnez d'abord un Distrito</option>
-                        </select>
-                        <?php wp_nonce_field('scrape_concelho_nonce', 'scrape_nonce'); ?>
-                        <?php submit_button('Scraper au niveau Concelho', 'secondary', 'scrape_concelho', false); ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">Freguesia</th>
-                    <td>
-                        <select name="freguesia" id="freguesia" disabled>
-                            <option value="">Sélectionnez d'abord un Concelho</option>
-                        </select>
-                        <?php wp_nonce_field('scrape_price_nonce', 'scrape_nonce'); ?>
-                        <?php submit_button('Scraper au niveau Freguesia', 'primary', 'scrape_price', false); ?>
-                    </td>
-                </tr>
-            </table>
-        </form>
-        
-        <?php if (!empty($results)): ?>
-            <h2>Résultats du Scraping</h2>
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th>Niveau</th>
-                        <th>Type de Bien</th>
-                        <th>Lieu</th>
-                        <th>Prix Moyen</th>
-                        <th>URL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($results as $result): ?>
+        <hr>
+
+        <h2>Sélecteur de Localisation (Données Complètes)</h2>
+        <table class="form-table">
+            <tr>
+                <th scope="row">Distrito</th>
+                <td>
+                    <select name="distrito" id="distrito" required>
+                        <option value="">Choisir un Distrito</option>
+                        <?php foreach ($data as $distrito_slug => $distrito_info): ?>
+                            <option value="<?php echo esc_attr($distrito_slug); ?>"><?php echo esc_html($distrito_info['name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Concelho</th>
+                <td>
+                    <select name="concelho" id="concelho" disabled>
+                        <option value="">Sélectionnez d'abord un Distrito</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">Freguesia</th>
+                <td>
+                    <select name="freguesia" id="freguesia" disabled>
+                        <option value="">Sélectionnez d'abord un Concelho</option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+
+        <hr>
+        <h2>Données du Marché Actuel</h2>
+        <?php
+        $market_data = function_exists('tagus_value_get_market_data') ? tagus_value_get_market_data() : [];
+        if (empty($market_data)):
+        ?>
+            <p>Aucune donnée de marché n'a encore été générée. Lancez le scraping pour commencer.</p>
+        <?php else: ?>
+            <form method="post">
+                <input type="hidden" name="tagus_value_action" value="save_manual_prices">
+                <?php wp_nonce_field('tagus_value_save_prices_action', 'tagus_value_prices_nonce'); ?>
+
+                <style>
+                    .market-data-table .concelho-row td:first-child { padding-left: 30px; }
+                    .market-data-table .freguesia-row td:first-child { padding-left: 60px; }
+                    .market-data-table .distrito-row { background-color: #f0f6fc; }
+                    .market-data-table input[type="text"] { width: 100px; }
+                </style>
+                <table class="wp-list-table widefat fixed striped market-data-table">
+                    <thead>
                         <tr>
-                            <td><?php echo esc_html($result['level']); ?></td>
-                            <td><?php echo esc_html($result['property_type']); ?></td>
-                            <td><?php echo esc_html($result['location']); ?></td>
-                            <td>
-                                <?php if ($result['price'] !== false): ?>
-                                    <?php echo esc_html($result['price']); ?> €/m²
-                                <?php else: ?>
-                                    <span style="color: red;"><?php echo esc_html($result['error']); ?></span>
-                                <?php endif; ?>
-                            </td>
-                            <td><a href="<?php echo esc_url($result['url']); ?>" target="_blank"><?php echo esc_html($result['url']); ?></a></td>
+                            <th>Localisation</th>
+                            <th>Prix Moyen Vente (€/m²)</th>
+                            <th>Prix Moyen Location (€/m²)</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($market_data as $distrito_slug => $distrito_data): ?>
+                            <tr class="distrito-row">
+                                <td><strong><?php echo esc_html($distrito_data['name'] ?? $distrito_slug); ?></strong></td>
+                                <td><input type="text" size="8" name="prices[<?php echo esc_attr($distrito_slug); ?>][average]" value="<?php echo esc_attr($distrito_data['average'] ?? ''); ?>" placeholder="N/A" /></td>
+                                <td><input type="text" size="8" name="prices[<?php echo esc_attr($distrito_slug); ?>][average_rent]" value="<?php echo esc_attr($distrito_data['average_rent'] ?? ''); ?>" placeholder="N/A" /></td>
+                            </tr>
+                            <?php foreach ($distrito_data as $concelho_slug => $concelho_data): ?>
+                                <?php if (!is_array($concelho_data) || !isset($concelho_data['freguesias'])) continue; ?>
+                                <tr class="concelho-row">
+                                    <td><?php echo esc_html($concelho_data['name']); ?></td>
+                                    <td><input type="text" size="8" name="prices[<?php echo esc_attr($distrito_slug); ?>][<?php echo esc_attr($concelho_slug); ?>][average]" value="<?php echo esc_attr($concelho_data['average'] ?? ''); ?>" placeholder="N/A" /></td>
+                                    <td><input type="text" size="8" name="prices[<?php echo esc_attr($distrito_slug); ?>][<?php echo esc_attr($concelho_slug); ?>][average_rent]" value="<?php echo esc_attr($concelho_data['average_rent'] ?? ''); ?>" placeholder="N/A" /></td>
+                                </tr>
+                                <?php foreach ($concelho_data['freguesias'] as $freguesia_slug => $freguesia_data): ?>
+                                    <tr class="freguesia-row">
+                                        <td><?php echo esc_html($freguesia_data['name']); ?></td>
+                                        <td><input type="text" size="8" name="prices[<?php echo esc_attr($distrito_slug); ?>][<?php echo esc_attr($concelho_slug); ?>][freguesias][<?php echo esc_attr($freguesia_slug); ?>][average]" value="<?php echo esc_attr($freguesia_data['average'] ?? ''); ?>" placeholder="N/A" /></td>
+                                        <td><input type="text" size="8" name="prices[<?php echo esc_attr($distrito_slug); ?>][<?php echo esc_attr($concelho_slug); ?>][freguesias][<?php echo esc_attr($freguesia_slug); ?>][average_rent]" value="<?php echo esc_attr($freguesia_data['average_rent'] ?? ''); ?>" placeholder="N/A" /></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php submit_button('Enregistrer les modifications manuelles'); ?>
+            </form>
         <?php endif; ?>
+
     </div>
 
     <script>
@@ -167,19 +437,19 @@ function tagus_value_scraper_admin_page() {
         // Populate Concelho dropdown when Distrito changes
         $('#distrito').change(function() {
             var distrito = $(this).val();
-            $('#concelho').html('<option value="">Choisir un Concelho</option>').prop('disabled', true);
-            $('#freguesia').html('<option value="">Choisir une Freguesia</option>').prop('disabled', true);
-            $('#scrape_concelho').prop('disabled', true);
-            $('#scrape_price').prop('disabled', true);
+            var concelhoSelect = $('#concelho');
+            var freguesiaSelect = $('#freguesia');
+
+            concelhoSelect.html('<option value="">Choisir un Concelho</option>').prop('disabled', true);
+            freguesiaSelect.html('<option value="">Choisir une Freguesia</option>').prop('disabled', true);
             
             if (distrito && data[distrito]) {
-                var concelhos = Object.keys(data[distrito]).filter(key => key !== 'average' && key !== 'average_rent');
+                var concelhos = Object.keys(data[distrito]).filter(key => key !== 'name' && key !== 'average' && key !== 'average_rent');
                 concelhos.forEach(function(concelhoKey) {
                     var option = '<option value="' + concelhoKey + '">' + data[distrito][concelhoKey].name + '</option>';
-                    $('#concelho').append(option);
+                    concelhoSelect.append(option);
                 });
-                $('#concelho').prop('disabled', false);
-                $('#scrape_concelho').prop('disabled', false);
+                concelhoSelect.prop('disabled', false);
             }
         });
         
@@ -187,51 +457,18 @@ function tagus_value_scraper_admin_page() {
         $('#concelho').change(function() {
             var distrito = $('#distrito').val();
             var concelho = $(this).val();
-            $('#freguesia').html('<option value="">Choisir une Freguesia</option>').prop('disabled', true);
-            $('#scrape_price').prop('disabled', true);
+            var freguesiaSelect = $('#freguesia');
+
+            freguesiaSelect.html('<option value="">Choisir une Freguesia</option>').prop('disabled', true);
             
-            if (distrito && concelho && data[distrito][concelho]) {
+            if (distrito && concelho && data[distrito][concelho] && data[distrito][concelho].freguesias) {
                 var freguesias = data[distrito][concelho].freguesias;
                 Object.keys(freguesias).forEach(function(freguesiaKey) {
                     var option = '<option value="' + freguesiaKey + '">' + freguesias[freguesiaKey].name + '</option>';
-                    $('#freguesia').append(option);
+                    freguesiaSelect.append(option);
                 });
-                $('#freguesia').prop('disabled', false);
-                $('#scrape_price').prop('disabled', false);
+                freguesiaSelect.prop('disabled', false);
             }
-        });
-        
-        // AJAX form submission
-        $('#scraper-form').submit(function(e) {
-            e.preventDefault();
-            var formData = $(this).serialize();
-            var action = '';
-            var level = '';
-            if ($(e.originalEvent.submitter).attr('name') === 'scrape_distrito') {
-                action = 'scrape_distrito_ajax';
-                level = 'Distrito';
-            } else if ($(e.originalEvent.submitter).attr('name') === 'scrape_concelho') {
-                action = 'scrape_concelho_ajax';
-                level = 'Concelho';
-            } else {
-                action = 'scrape_price_ajax';
-                level = 'Freguesia';
-            }
-            $.post(ajaxurl, formData + '&action=' + action + '&scrape_nonce=<?php echo wp_create_nonce('scrape_price_ajax'); ?>', function(response) {
-                var resultsTable = $('#results-table tbody');
-                if (!resultsTable.length) {
-                    $('.wp-list-table').remove();
-                    $('.wrap').append('<h2>Résultats du Scraping</h2><table class="wp-list-table widefat fixed striped" id="results-table"><thead><tr><th>Niveau</th><th>Type de Bien</th><th>Lieu</th><th>Prix Moyen</th><th>URL</th></tr></thead><tbody></tbody></table>');
-                    resultsTable = $('#results-table tbody');
-                }
-                var row = '';
-                if (response.success) {
-                    row = '<tr><td>' + level + '</td><td>' + response.data.property_type + '</td><td>' + response.data.location + '</td><td>' + response.data.price + ' €/m²</td><td><a href="' + response.data.url + '" target="_blank">' + response.data.url + '</a></td></tr>';
-                } else {
-                    row = '<tr><td>' + level + '</td><td>' + response.data.property_type + '</td><td>' + response.data.location + '</td><td><span style="color: red;">' + response.data.error + '</span></td><td><a href="' + response.data.url + '" target="_blank">' + response.data.url + '</a></td></tr>';
-                }
-                resultsTable.append(row);
-            });
         });
     });
     </script>
@@ -251,125 +488,104 @@ function get_property_type_label($property_type) {
     return isset($labels[$property_type]) ? $labels[$property_type] : $property_type;
 }
 
-// AJAX handlers
-add_action('wp_ajax_scrape_distrito_ajax', 'handle_scrape_distrito_ajax');
-function handle_scrape_distrito_ajax() {
-    check_ajax_referer('scrape_price_ajax', 'scrape_nonce');
-    
-    $distrito = sanitize_text_field($_POST['distrito']);
-    $property_type = sanitize_text_field($_POST['property_type']);
-    $data = tagus_value_get_market_data();
-    
-    $result = scrape_idealista_price($distrito, '', '', $property_type);
-    $result['level'] = 'Distrito';
-    $result['location'] = ucfirst(str_replace('_', ' ', $distrito));
-    $result['property_type'] = get_property_type_label($property_type);
-    
-    if ($result['price'] !== false) {
-        wp_send_json_success($result);
-    } else {
-        wp_send_json_error($result);
-    }
-}
+// Obsolete AJAX handlers removed.
 
-add_action('wp_ajax_scrape_concelho_ajax', 'handle_scrape_concelho_ajax');
-function handle_scrape_concelho_ajax() {
-    check_ajax_referer('scrape_price_ajax', 'scrape_nonce');
-    
-    $distrito = sanitize_text_field($_POST['distrito']);
-    $concelho = sanitize_text_field($_POST['concelho']);
-    $property_type = sanitize_text_field($_POST['property_type']);
-    $data = tagus_value_get_market_data();
-    
-    $result = scrape_idealista_price($distrito, $concelho, '', $property_type);
-    $result['level'] = 'Concelho';
-    $result['location'] = $data[$distrito][$concelho]['name'];
-    $result['property_type'] = get_property_type_label($property_type);
-    
-    if ($result['price'] !== false) {
-        wp_send_json_success($result);
-    } else {
-        wp_send_json_error($result);
-    }
-}
-
-add_action('wp_ajax_scrape_price_ajax', 'handle_scrape_price_ajax');
-function handle_scrape_price_ajax() {
-    check_ajax_referer('scrape_price_ajax', 'scrape_nonce');
-    
-    $distrito = sanitize_text_field($_POST['distrito']);
-    $concelho = sanitize_text_field($_POST['concelho']);
-    $freguesia = sanitize_text_field($_POST['freguesia']);
-    $property_type = sanitize_text_field($_POST['property_type']);
-    $data = tagus_value_get_market_data();
-    
-    $result = scrape_idealista_price($distrito, $concelho, $freguesia, $property_type);
-    $result['level'] = 'Freguesia';
-    $result['location'] = $data[$distrito][$concelho]['name'] . ', ' . $data[$distrito][$concelho]['freguesias'][$freguesia]['name'];
-    $result['property_type'] = get_property_type_label($property_type);
-    
-    if ($result['price'] !== false) {
-        wp_send_json_success($result);
-    } else {
-        wp_send_json_error($result);
-    }
-}
-
-// Function to scrape the average price
-function scrape_idealista_price($distrito, $concelho = '', $freguesia = '', $property_type = 'comprar-casas/com-apartamentos') {
-    // Split property_type into base and subtype
-    $parts = explode('/', $property_type);
-    $base_type = $parts[0];
-    $subtype = isset($parts[1]) ? '/' . $parts[1] : '';
-    
-    // Construct URL based on level
-    if ($freguesia) {
-        $url = 'https://www.idealista.pt/' . $base_type . '/' . $concelho . '/' . $freguesia . $subtype . '/';
-    } elseif ($concelho) {
-        $url = 'https://www.idealista.pt/' . $base_type . '/' . $concelho . $subtype . '/';
-    } else {
-        $url = 'https://www.idealista.pt/' . $base_type . '/' . $distrito . $subtype . '/';
-    }
-    
-    // Fetch the page using wp_remote_get
+/**
+ * Scrapes a single Idealista URL for its average price.
+ *
+ * @param string $url The URL to scrape.
+ * @return array A result array with 'price', 'error', and 'url'.
+ */
+function tagus_value_scrape_url($url) {
     $response = wp_remote_get($url, array(
         'timeout' => 30,
         'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     ));
-    
+
     if (is_wp_error($response)) {
-        $error_message = 'Erreur HTTP : ' . $response->get_error_message();
-        error_log('Tagus Value Scraper: ' . $error_message . ' for URL - ' . $url);
-        return array('price' => false, 'error' => $error_message, 'url' => $url);
+        return array('price' => false, 'error' => 'Erreur HTTP: ' . $response->get_error_message(), 'url' => $url);
     }
-    
+
     $body = wp_remote_retrieve_body($response);
     if (empty($body)) {
-        $error_message = 'Réponse vide : la page n\'a pas pu être chargée.';
-        error_log('Tagus Value Scraper: ' . $error_message . ' for URL - ' . $url);
-        return array('price' => false, 'error' => $error_message, 'url' => $url);
+        return array('price' => false, 'error' => 'Réponse vide.', 'url' => $url);
     }
-    
-    // Parse HTML using DOMDocument
+
     $dom = new DOMDocument();
-    @$dom->loadHTML('<?xml encoding="UTF-8">' . $body); // Handle encoding
+    @$dom->loadHTML('<?xml encoding="UTF-8">' . $body);
     $xpath = new DOMXPath($dom);
+
+    // Try primary selector first, then fallbacks
+    $selectors = array(
+        '//p[@class="items-average-price"]',
+        '//*[contains(text(), "eur/m²")]'
+    );
     
-    // Find element containing "eur/m²"
-    $price_nodes = $xpath->query('//*[contains(text(), "eur/m²")]');
-    if ($price_nodes->length > 0) {
-        $price_text = $price_nodes->item(0)->textContent;
-        // Extract numeric value (e.g., "3.349 eur/m²" -> 3.349)
-        if (preg_match('/([\d,.]+)/', $price_text, $matches)) {
-            $price = floatval(str_replace(',', '.', $matches[1]));
-            error_log('Tagus Value Scraper: Successfully scraped price ' . $price . ' for URL - ' . $url);
-            return array('price' => $price, 'error' => '', 'url' => $url);
+    foreach ($selectors as $selector) {
+        $price_nodes = $xpath->query($selector);
+        if ($price_nodes->length > 0) {
+            $price_text = $price_nodes->item(0)->textContent;
+            if (preg_match('/([\d,.]+)/', $price_text, $matches)) {
+                $price_string = $matches[1];
+                // Handle Portuguese number format (e.g., "1.234,56")
+                $price_string_no_thousands = str_replace('.', '', $price_string);
+                $price_string_for_float = str_replace(',', '.', $price_string_no_thousands);
+                $price = floatval($price_string_for_float);
+                return array('price' => $price, 'error' => '', 'url' => $url);
+            }
         }
     }
-    
-    $error_message = 'Aucun prix moyen trouvé. La page peut ne pas contenir de données ou l\'élément items-average-price est absent. Essayez un autre niveau ou type de bien, ou utilisez l\'API Idealista.';
-    error_log('Tagus Value Scraper: ' . $error_message . ' for URL - ' . $url);
-    return array('price' => false, 'error' => $error_message, 'url' => $url);
+
+    return array('price' => false, 'error' => 'Aucun prix moyen trouvé.', 'url' => $url);
+}
+
+/**
+ * Runs the full scraping process for all locations.
+ * This function is intended to be called by a background process.
+ *
+ * @return array The fully populated market data array.
+ */
+function tagus_value_run_full_scrape() {
+    $market_data = tagus_value_process_locations_file();
+    $base_url_sale = 'https://www.idealista.pt/comprar-casas';
+    $base_url_rent = 'https://www.idealista.pt/arrendar-casas';
+
+    foreach ($market_data as $distrito_slug => &$distrito_data) {
+        $distrito_url_sale = "$base_url_sale/$distrito_slug-distrito/";
+        $distrito_url_rent = "$base_url_rent/$distrito_slug-distrito/";
+
+        $distrito_data['average'] = tagus_value_scrape_url($distrito_url_sale)['price'];
+        $distrito_data['average_rent'] = tagus_value_scrape_url($distrito_url_rent)['price'];
+        sleep(1);
+
+        foreach ($distrito_data as $concelho_slug => &$concelho_data) {
+            if (!is_array($concelho_data) || !isset($concelho_data['freguesias'])) {
+                continue;
+            }
+
+            $concelho_url_sale = "$base_url_sale/$concelho_slug-concelho/";
+            $concelho_url_rent = "$base_url_rent/$concelho_slug-concelho/";
+
+            $concelho_data['average'] = tagus_value_scrape_url($concelho_url_sale)['price'];
+            $concelho_data['average_rent'] = tagus_value_scrape_url($concelho_url_rent)['price'];
+            sleep(1);
+
+            foreach ($concelho_data['freguesias'] as $freguesia_slug => &$freguesia_data) {
+                $freguesia_url_sale = "$base_url_sale/$concelho_slug/$freguesia_slug/";
+                $freguesia_url_rent = "$base_url_rent/$concelho_slug/$freguesia_slug/";
+
+                $freguesia_data['average'] = tagus_value_scrape_url($freguesia_url_sale)['price'];
+                $freguesia_data['average_rent'] = tagus_value_scrape_url($freguesia_url_rent)['price'];
+                sleep(1);
+            }
+            unset($freguesia_data);
+        }
+        unset($concelho_data);
+    }
+    unset($distrito_data);
+
+    // In a later phase, this will write to a file. For now, it returns the data.
+    return $market_data;
 }
 
 // Enqueue jQuery for AJAX
