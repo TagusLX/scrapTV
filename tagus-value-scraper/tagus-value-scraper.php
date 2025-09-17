@@ -192,7 +192,7 @@ function tagus_value_handle_admin_actions() {
 
         // Schedule the first concelho batch
         wp_clear_scheduled_hook('tagus_value_scrape_concelho_hook');
-        wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array('concelhos' => $concelhos_to_scrape));
+        wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array( array('concelhos' => $concelhos_to_scrape) ));
 
         add_action('admin_notices', function() {
             echo '<div class="notice notice-success is-dismissible"><p>Le processus de scraping complet a été lancé. Cela peut prendre plusieurs heures.</p></div>';
@@ -238,7 +238,7 @@ function tagus_value_handle_admin_actions() {
         } elseif (isset($_POST['scrape_concelho_button']) && $concelho && $distrito) {
             $concelhos_to_scrape = [['distrito_slug' => $distrito, 'concelho_slug' => $concelho]];
             wp_clear_scheduled_hook('tagus_value_scrape_concelho_hook');
-            wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array('concelhos' => $concelhos_to_scrape));
+            wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array( array('concelhos' => $concelhos_to_scrape) ));
             $notice_message = "Scraping pour le Concelho '$concelho' lancé en arrière-plan.";
         } elseif (isset($_POST['scrape_distrito_button']) && $distrito) {
             $all_locations = tagus_value_process_locations_file();
@@ -252,7 +252,7 @@ function tagus_value_handle_admin_actions() {
             }
             if (!empty($concelhos_to_scrape)) {
                 wp_clear_scheduled_hook('tagus_value_scrape_concelho_hook');
-                wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array('concelhos' => $concelhos_to_scrape));
+                wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array( array('concelhos' => $concelhos_to_scrape) ));
                 $notice_message = "Scraping pour le Distrito '$distrito' lancé en arrière-plan.";
             } else {
                 $notice_message = "Aucun concelho trouvé pour le Distrito '$distrito'.";
@@ -303,7 +303,7 @@ function tagus_value_scrape_concelho_hook_func($args) {
 
     // If there are more concelhos, reschedule the hook for the next batch
     if (!empty($concelhos)) {
-        wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array('concelhos' => $concelhos));
+        wp_schedule_single_event(time() + 5, 'tagus_value_scrape_concelho_hook', array( array('concelhos' => $concelhos) ));
     } else {
         update_option('tagus_value_scrape_status', 'idle');
         tagus_value_generate_php_data_file();
