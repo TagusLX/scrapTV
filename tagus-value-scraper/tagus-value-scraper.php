@@ -121,6 +121,35 @@ function tagus_value_sanitize_prices_array($array) {
     return $array;
 }
 
+/**
+ * Get the Idealista URL for a specific location.
+ *
+ * @param string $base_type 'comprar-casas' or 'arrendar-casas'.
+ * @param array  $slugs Associative array of slugs ('distrito', 'concelho', 'freguesia').
+ * @return string The generated URL.
+ */
+function tagus_value_get_idealista_url($base_type, $slugs = []) {
+    $base_url = 'https://www.idealista.pt/' . $base_type;
+
+    $distrito_slug = $slugs['distrito'] ?? '';
+    $concelho_slug = $slugs['concelho'] ?? '';
+    $freguesia_slug = $slugs['freguesia'] ?? '';
+
+    if (!empty($freguesia_slug) && !empty($concelho_slug)) {
+        return "$base_url/$concelho_slug/$freguesia_slug/";
+    }
+
+    if (!empty($concelho_slug)) {
+        return "$base_url/$concelho_slug/";
+    }
+
+    if (!empty($distrito_slug)) {
+        return "$base_url/$distrito_slug-distrito/";
+    }
+
+    return ''; // Return empty string if no valid slugs are provided
+}
+
 // Handle admin form submissions
 add_action('admin_init', 'tagus_value_handle_admin_actions');
 function tagus_value_handle_admin_actions() {
@@ -139,13 +168,12 @@ function tagus_value_handle_admin_actions() {
         $concelhos_to_scrape = [];
         $initial_data = [];
 
-        $base_url_sale = 'https://www.idealista.pt/comprar-casas';
-        $base_url_rent = 'https://www.idealista.pt/arrendar-casas';
-
         foreach ($all_locations as $distrito_slug => $distrito_data) {
             // Scrape top-level distrito prices immediately
-            $distrito_data['average'] = tagus_value_scrape_url("$base_url_sale/$distrito_slug-distrito/")['price'];
-            $distrito_data['average_rent'] = tagus_value_scrape_url("$base_url_rent/$distrito_slug-distrito/")['price'];
+            $distrito_url_sale = tagus_value_get_idealista_url('comprar-casas', ['distrito' => $distrito_slug]);
+            $distrito_url_rent = tagus_value_get_idealista_url('arrendar-casas', ['distrito' => $distrito_slug]);
+            $distrito_data['average'] = tagus_value_scrape_url($distrito_url_sale)['price'];
+            $distrito_data['average_rent'] = tagus_value_scrape_url($distrito_url_rent)['price'];
             $initial_data[$distrito_slug] = $distrito_data;
 
             foreach ($distrito_data as $concelho_slug => $concelho_data) {
@@ -287,12 +315,9 @@ function tagus_value_scrape_concelho_hook_func($args) {
  * Scrapes all data for a single concelho and its freguesias.
  */
 function tagus_value_scrape_single_concelho($distrito_slug, $concelho_slug, $concelho_data) {
-    $base_url_sale = 'https://www.idealista.pt/comprar-casas';
-    $base_url_rent = 'https://www.idealista.pt/arrendar-casas';
-
     // Scrape Concelho level
-    $concelho_url_sale = "$base_url_sale/$concelho_slug/";
-    $concelho_url_rent = "$base_url_rent/$concelho_slug/";
+    $concelho_url_sale = tagus_value_get_idealista_url('comprar-casas', ['concelho' => $concelho_slug]);
+    $concelho_url_rent = tagus_value_get_idealista_url('arrendar-casas', ['concelho' => $concelho_slug]);
     $concelho_data['average'] = tagus_value_scrape_url($concelho_url_sale)['price'];
     $concelho_data['average_rent'] = tagus_value_scrape_url($concelho_url_rent)['price'];
     sleep(1);
@@ -300,8 +325,9 @@ function tagus_value_scrape_single_concelho($distrito_slug, $concelho_slug, $con
     // Scrape Freguesias
     if (isset($concelho_data['freguesias']) && is_array($concelho_data['freguesias'])) {
         foreach ($concelho_data['freguesias'] as $freguesia_slug => &$freguesia_data) {
-            $freguesia_url_sale = "$base_url_sale/$concelho_slug/$freguesia_slug/";
-            $freguesia_url_rent = "$base_url_rent/$concelho_slug/$freguesia_slug/";
+            $slugs = ['concelho' => $concelho_slug, 'freguesia' => $freguesia_slug];
+            $freguesia_url_sale = tagus_value_get_idealista_url('comprar-casas', $slugs);
+            $freguesia_url_rent = tagus_value_get_idealista_url('arrendar-casas', $slugs);
             $freguesia_data['average'] = tagus_value_scrape_url($freguesia_url_sale)['price'];
             $freguesia_data['average_rent'] = tagus_value_scrape_url($freguesia_url_rent)['price'];
             sleep(1);
@@ -376,11 +402,9 @@ function tagus_value_scrape_single_freguesia($distrito_slug, $concelho_slug, $fr
         return false;
     }
 
-    $base_url_sale = 'https://www.idealista.pt/comprar-casas';
-    $base_url_rent = 'https://www.idealista.pt/arrendar-casas';
-    // Corrected URL structure
-    $freguesia_url_sale = "$base_url_sale/$concelho_slug/$freguesia_slug/";
-    $freguesia_url_rent = "$base_url_rent/$concelho_slug/$freguesia_slug/";
+    $slugs = ['concelho' => $concelho_slug, 'freguesia' => $freguesia_slug];
+    $freguesia_url_sale = tagus_value_get_idealista_url('comprar-casas', $slugs);
+    $freguesia_url_rent = tagus_value_get_idealista_url('arrendar-casas', $slugs);
 
     $sale_price = tagus_value_scrape_url($freguesia_url_sale)['price'];
     $rent_price = tagus_value_scrape_url($freguesia_url_rent)['price'];
@@ -539,9 +563,8 @@ function tagus_value_scraper_admin_page() {
                     </thead>
                     <tbody>
                         <?php
-                        $base_url = 'https://www.idealista.pt/comprar-casas';
                         foreach ($market_data_display as $distrito_slug => $distrito_data):
-                            $distrito_url = "$base_url/$distrito_slug-distrito/";
+                            $distrito_url = tagus_value_get_idealista_url('comprar-casas', ['distrito' => $distrito_slug]);
                         ?>
                             <tr class="distrito-row">
                                 <td><strong><?php echo esc_html($distrito_data['name'] ?? $distrito_slug); ?></strong></td>
@@ -552,7 +575,7 @@ function tagus_value_scraper_admin_page() {
                             <?php foreach ($distrito_data as $concelho_slug => $concelho_data): ?>
                                 <?php
                                 if (!is_array($concelho_data) || !isset($concelho_data['freguesias'])) continue;
-                                $concelho_url = "$base_url/$concelho_slug/";
+                                $concelho_url = tagus_value_get_idealista_url('comprar-casas', ['concelho' => $concelho_slug]);
                                 ?>
                                 <tr class="concelho-row">
                                     <td><?php echo esc_html($concelho_data['name']); ?></td>
@@ -561,7 +584,7 @@ function tagus_value_scraper_admin_page() {
                                     <td><a href="<?php echo esc_url($concelho_url); ?>" target="_blank">Voir</a></td>
                                 </tr>
                                 <?php foreach ($concelho_data['freguesias'] as $freguesia_slug => $freguesia_data):
-                                    $freguesia_url = "$base_url/$concelho_slug/$freguesia_slug/";
+                                    $freguesia_url = tagus_value_get_idealista_url('comprar-casas', ['concelho' => $concelho_slug, 'freguesia' => $freguesia_slug]);
                                 ?>
                                     <tr class="freguesia-row">
                                         <td><?php echo esc_html($freguesia_data['name']); ?></td>
