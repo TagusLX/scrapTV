@@ -1,63 +1,92 @@
 <?php
 
-if (!defined('ABSPATH')) exit;
-
-function tagus_value_generate_slug_for_data($text) {
-    $text = iconv('UTF-8', 'ASCII//TRANSLIT', $text);
-    $text = strtolower($text);
-    $text = preg_replace('/[^a-z0-9\-]+/', '-', $text);
-    $text = preg_replace('/-+/', '-', $text);
-    $text = trim($text, '-');
-    return empty($text) ? 'n-a' : $text;
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
 }
 
+/**
+ * Builds the full, nested data structure for all locations.
+ * This structure serves as the initial template for the market data.
+ *
+ * @return array The complete data skeleton.
+ */
 function tagus_value_get_location_skeleton() {
-    $data = [];
-    $file_path = plugin_dir_path(__FILE__) . 'locations.tsv';
-    if (!file_exists($file_path)) return [];
+    $locations = tagus_value_get_location_data();
+    $skeleton = [];
 
-    $bedroom_types = ['t0', 't1', 't2', 't3', 't4-t5'];
+    $operations = ['venda', 'arrendar'];
     $property_types = ['apartamentos', 'moradias'];
-    $price_template = ['average' => null, 'average_rent' => null, 'url_sale' => '', 'url_rent' => ''];
+    $bedrooms = ['t0', 't1', 't2', 't3', 't4-t5'];
 
-    $handle = fopen($file_path, 'r');
-    if (!$handle) return [];
+    foreach ($locations as $distrito_slug => $distrito_data) {
+        $skeleton[$distrito_slug] = [
+            'name' => $distrito_data['name'],
+            'slug' => $distrito_slug,
+            'data' => [],
+            'concelhos' => [],
+        ];
 
-    fgetcsv($handle, 0, "\t"); // Skip header
+        // Generate data structure for the distrito itself
+        $skeleton[$distrito_slug]['data'] = tagus_value_get_data_points_for_location($distrito_slug, null, null);
 
-    while (($row = fgetcsv($handle, 0, "\t")) !== FALSE) {
-        if (count($row) < 3) continue;
+        foreach ($distrito_data['concelhos'] as $concelho_slug => $concelho_data) {
+            $skeleton[$distrito_slug]['concelhos'][$concelho_slug] = [
+                'name' => $concelho_data['name'],
+                'slug' => $concelho_slug,
+                'data' => [],
+                'freguesias' => [],
+            ];
 
-        list($distrito_name, $concelho_name, $freguesia_raw_name) = array_map('trim', $row);
+            // Generate data structure for the concelho
+            $skeleton[$distrito_slug]['concelhos'][$concelho_slug]['data'] = tagus_value_get_data_points_for_location($distrito_slug, $concelho_slug, null);
 
-        $freguesia_name = str_starts_with($freguesia_raw_name, 'União das freguesias de ')
-                        ? substr($freguesia_raw_name, strlen('União das freguesias de '))
-                        : $freguesia_raw_name;
+            foreach ($concelho_data['freguesias'] as $freguesia_slug => $freguesia_data) {
+                 $skeleton[$distrito_slug]['concelhos'][$concelho_slug]['freguesias'][$freguesia_slug] = [
+                    'name' => $freguesia_data['name'],
+                    'slug' => $freguesia_slug,
+                    'data' => [],
+                ];
 
-        $distrito_slug = tagus_value_generate_slug_for_data($distrito_name);
-        $concelho_slug = tagus_value_generate_slug_for_data($concelho_name);
-        $freguesia_slug = tagus_value_generate_slug_for_data($freguesia_name);
-
-        if (!isset($data[$distrito_slug])) {
-            $data[$distrito_slug] = array_merge(['name' => $distrito_name], $price_template);
-            $data[$distrito_slug]['concelhos'] = [];
-        }
-        if (!isset($data[$distrito_slug]['concelhos'][$concelho_slug])) {
-            $data[$distrito_slug]['concelhos'][$concelho_slug] = array_merge(['name' => $concelho_name], $price_template, ['freguesias' => []]);
-        }
-        if (!isset($data[$distrito_slug]['concelhos'][$concelho_slug]['freguesias'][$freguesia_slug])) {
-            $freguesia_data = array_merge(['name' => $freguesia_name], $price_template, ['types' => []]);
-            foreach ($property_types as $prop_type) {
-                $freguesia_data['types'][$prop_type] = [];
-                foreach ($bedroom_types as $bed_type) {
-                    if ($prop_type === 'moradias' && $bed_type === 't0') continue;
-                    $freguesia_data['types'][$prop_type][$bed_type] = $price_template;
-                }
+                // Generate data structure for the freguesia
+                $skeleton[$distrito_slug]['concelhos'][$concelho_slug]['freguesias'][$freguesia_slug]['data'] = tagus_value_get_data_points_for_location($distrito_slug, $concelho_slug, $freguesia_slug);
             }
-            $data[$distrito_slug]['concelhos'][$concelho_slug]['freguesias'][$freguesia_slug] = $freguesia_data;
         }
     }
-    fclose($handle);
-    return $data;
+
+    return $skeleton;
 }
-?>
+
+/**
+ * Helper function to generate the nested data points for a single location.
+ * (distrito, concelho, or freguesia)
+ *
+ * @param string $distrito_slug
+ * @param string|null $concelho_slug
+ * @param string|null $freguesia_slug
+ * @return array The generated data points.
+ */
+function tagus_value_get_data_points_for_location($distrito_slug, $concelho_slug, $freguesia_slug) {
+    $data_points = [];
+    $operations = ['venda', 'arrendar'];
+    $property_types = ['apartamentos', 'moradias'];
+    // The 'all' key represents the category total (e.g., all apartments, regardless of bedroom count)
+    $bedrooms = ['all', 't0', 't1', 't2', 't3', 't4-t5'];
+
+    foreach ($operations as $operation) {
+        $data_points[$operation] = [];
+        foreach ($property_types as $property_type) {
+            $data_points[$operation][$property_type] = [];
+
+            foreach ($bedrooms as $bedroom_key) {
+                // For the 'all' category, the bedroom parameter should be null.
+                $bedroom_param_for_url = ($bedroom_key === 'all') ? null : $bedroom_key;
+
+                $data_points[$operation][$property_type][$bedroom_key] = [
+                    'price' => '',
+                    'url' => tagus_value_get_idealista_url($distrito_slug, $concelho_slug, $freguesia_slug, $property_type, $bedroom_param_for_url, $operation)
+                ];
+            }
+        }
+    }
+    return $data_points;
+}
